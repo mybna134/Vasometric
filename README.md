@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/Figma-Plugin-8C4FFF?style=flat-square&logo=figma" alt="Figma plugin">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Bun-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mybna134/Vasometric?style=flat-square&label=License" alt="GPL-3.0-only license"></a>
   <p>
   <a href="README.md"><img src="https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-0A66C2?style=flat-square" alt="简体中文"></a>
   <a href="README.en.md"><img src="https://img.shields.io/badge/Language-English-0A66C2?style=flat-square" alt="English"></a>
@@ -19,6 +20,10 @@
 - 在插件面板中预览所选图层的等轴测变换，调整方向、角度和挤出深度。
 - 调整透视模式下的倾斜、3D 旋转、相机、挤出和阴影。
 - 在预览中显示等轴测立方体线框网格；点击 **Apply to selection** 后才会修改 Figma 图层。
+
+## 许可证
+
+本项目以 [GNU General Public License v3.0 only](LICENSE) 发布。
 
 ## 安装
 

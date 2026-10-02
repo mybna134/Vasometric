@@ -13,7 +13,7 @@
     "watch": "bun run build:plugin -- --watch"
   },
   "author": "",
-  "license": "",
+  "license": "GPL-3.0-only",
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@figma/eslint-plugin-figma-plugins": "*",

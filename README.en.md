@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/Figma-Plugin-8C4FFF?style=flat-square&logo=figma" alt="Figma plugin">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Bun-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mybna134/Vasometric?style=flat-square&label=License" alt="GPL-3.0-only license"></a>
   <p>
   <a href="README.md"><img src="https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-0A66C2?style=flat-square" alt="简体中文"></a>
   <a href="README.en.md"><img src="https://img.shields.io/badge/Language-English-0A66C2?style=flat-square" alt="English"></a>
@@ -20,6 +21,10 @@
 - Preview axonometric transforms for selected layers, with direction, angle, and extrusion depth controls.
 - Adjust skew, 3D rotation, camera, extrusion, and shadows in perspective mode.
 - Show an isometric cube wireframe behind the preview. Figma layers change only when you click **Apply to selection**.
+
+## License
+
+This project is distributed under the [GNU General Public License v3.0 only](LICENSE).
 
 ## Install
 
