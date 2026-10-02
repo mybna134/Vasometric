@@ -1,6 +1,15 @@
+<table width="100%" bgcolor="#ffffff" role="presentation">
+<tr><td align="center" bgcolor="#ffffff">
+  <p>
+  <img src="readme-header.svg" width="530" height="88" alt="Vasometric">
+  </p>
+</td></tr>
+<tr><td align="center" bgcolor="#ffffff">
+  <p align="right"><font color="#000000">Figma 等轴测与透视绘图工具</font></p>
+</td></tr>
+</table>
+
 <div align="center">
-  <p><img src="icon.svg" width="72" height="72" alt=""> <img src="readme-wordmark.svg" width="430" height="72" alt="Vasometric"></p>
-  <p align="right">Figma 等轴测与透视绘图工具</p>
   <p>
   <a href="https://github.com/mybna134/Vasometric/releases/latest"><img src="https://img.shields.io/github/v/release/mybna134/Vasometric?style=flat-square&label=Latest%20Release&logo=github" alt="Latest release"></a>
   <a href="https://github.com/mybna134/Vasometric/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/mybna134/Vasometric/release.yml?style=flat-square&label=Build&logo=githubactions" alt="Build status"></a>
@@ -8,12 +17,14 @@
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Bun-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/mybna134/Vasometric?style=flat-square&label=License" alt="GPL-3.0-only license"></a>
+  </p>
   <p>
   <a href="README.md"><img src="https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-0A66C2?style=flat-square" alt="简体中文"></a>
   <a href="README.en.md"><img src="https://img.shields.io/badge/Language-English-0A66C2?style=flat-square" alt="English"></a>
   </p>
-  </p>
 </div>
+
+
 
 ## 功能
 
