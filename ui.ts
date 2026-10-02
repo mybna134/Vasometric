@@ -14,6 +14,84 @@ type PreviewLayerData = { id: string; bytes: Uint8Array; x: number; y: number; w
 type PreviewLayer = PreviewLayerData & { image: HTMLImageElement };
 type PreviewMessage = { nodes?: PreviewLayerData[]; bounds?: { x: number; y: number; width: number; height: number } | null };
 type PreviewVisual = { matrix: [number, number, number, number]; dx: number; dy: number; depth: number; angle: number; scale: number; planeAngle: number; isoDirection: Direction | null };
+type Language = 'en' | 'zh-CN';
+
+const translations: Record<Language, Record<string, string>> = {
+  en: {
+    'aria.transformMode': 'Transform mode', 'aria.preview': 'Selected layer transform preview', 'aria.angle': 'Angle in degrees', 'aria.perspectiveTools': 'Perspective tools',
+    'mode.axonometric': 'Axonometric', 'mode.perspective': 'Perspective', canvasPreview: 'Canvas preview', emptyPreview: 'Select a layer to see its live preview', chooseLayers: 'Choose layers on the canvas',
+    'direction.left': '← Left', 'direction.topLeft': '↙ Top left', 'direction.right': 'Right →', 'direction.topRight': 'Top right ↘', angle: 'Angle', snap: 'Snap', extrudeDepth: 'Extrude depth',
+    isometricHelp: 'Angle rotates each face in the canvas plane; 0° keeps the standard isometric view. To assemble a cube, use equal square faces, the same angle, and depth 0.',
+    showGrid: 'Show 3D cube grid', hideGrid: 'Hide 3D cube grid', 'panel.skew': 'Skew', 'panel.camera': 'Camera', 'panel.extrude': 'Extrude', 'panel.shadow': 'Shadow', reset: 'Reset preview', apply: 'Apply to selection',
+    'control.skewX': 'Skew X', 'control.skewY': 'Skew Y', 'control.rotateX': 'Rotate X', 'control.rotateY': 'Rotate Y', 'control.rotateZ': 'Rotate Z', 'control.perspective': 'Perspective',
+    'control.yaw': 'Camera yaw', 'control.pitch': 'Camera pitch', 'control.fov': 'Field of view', 'control.extrusionDepth': 'Depth', 'control.extrusionAngle': 'Direction', 'control.extrusionSteps': 'Segments',
+    'control.shadowX': 'Offset X', 'control.shadowY': 'Offset Y', 'control.shadowBlur': 'Softness', 'control.shadowOpacity': 'Opacity',
+    rotateHelp: 'Rotates around each layer’s center. X tilts vertically, Y turns sideways, and Z spins in the canvas.',
+    selected: '{count} selected', selectionReady: 'Showing the selected layers in this preview', chooseLayersToast: 'Select one or more layers on the canvas first', applied: 'Applied to {count} layer(s){extrusions}', addedExtrusions: ' · added {count} solid extrusion(s)', applyFailed: 'Apply failed: {detail}', actionFailed: 'Action failed: {detail}', previewReset: 'Preview reset',
+    encodeFailed: 'Could not prepare extrusion', done: 'Done',
+  },
+  'zh-CN': {
+    'aria.transformMode': '变换模式', 'aria.preview': '所选图层变换预览', 'aria.angle': '角度（度）', 'aria.perspectiveTools': '透视工具',
+    'mode.axonometric': '等轴测', 'mode.perspective': '透视', canvasPreview: '画布预览', emptyPreview: '选择图层以查看实时预览', chooseLayers: '请在画布上选择图层',
+    'direction.left': '← 左侧', 'direction.topLeft': '↙ 左上', 'direction.right': '右侧 →', 'direction.topRight': '右上 ↘', angle: '角度', snap: '快捷角度', extrudeDepth: '挤出深度',
+    isometricHelp: '角度用于旋转画布平面中的各个面；0° 为标准等轴测视图。要拼成立方体，请使用大小相同的正方形面、相同角度，并将深度设为 0。',
+    showGrid: '显示 3D 立方体网格', hideGrid: '隐藏 3D 立方体网格', 'panel.skew': '倾斜', 'panel.camera': '相机', 'panel.extrude': '挤出', 'panel.shadow': '阴影', reset: '重置预览', apply: '应用到所选图层',
+    'control.skewX': 'X 轴倾斜', 'control.skewY': 'Y 轴倾斜', 'control.rotateX': '绕 X 轴旋转', 'control.rotateY': '绕 Y 轴旋转', 'control.rotateZ': '绕 Z 轴旋转', 'control.perspective': '透视强度',
+    'control.yaw': '相机偏航角', 'control.pitch': '相机俯仰角', 'control.fov': '视野角度', 'control.extrusionDepth': '深度', 'control.extrusionAngle': '方向', 'control.extrusionSteps': '分段数',
+    'control.shadowX': 'X 轴偏移', 'control.shadowY': 'Y 轴偏移', 'control.shadowBlur': '柔化程度', 'control.shadowOpacity': '不透明度',
+    rotateHelp: '围绕每个图层的中心旋转。X 轴控制垂直倾斜，Y 轴控制侧向旋转，Z 轴控制画布平面内旋转。',
+    selected: '已选择 {count} 个图层', selectionReady: '正在预览所选图层', chooseLayersToast: '请先在画布上选择一个或多个图层', applied: '已应用到 {count} 个图层{extrusions}', addedExtrusions: ' · 已添加 {count} 个实体挤出效果', applyFailed: '应用失败：{detail}', actionFailed: '操作失败：{detail}', previewReset: '已重置预览',
+    encodeFailed: '无法生成挤出效果', done: '完成',
+  },
+};
+
+function detectLanguage(): Language {
+  try {
+    const saved = localStorage.getItem('vasometric-language');
+    if (saved === 'en' || saved === 'zh-CN') return saved;
+  } catch { /* Storage may be unavailable in the plugin iframe. */ }
+  return navigator.language.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en';
+}
+let language: Language = detectLanguage();
+let selectionCount = 0;
+
+function t(key: string, values: Record<string, string | number> = {}): string {
+  return (translations[language][key] || translations.en[key] || key).replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? ''));
+}
+
+function applyTranslations(): void {
+  document.documentElement.lang = language;
+  document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {
+    const key = element.dataset.i18n;
+    if (key) element.textContent = t(key);
+  });
+  document.querySelectorAll<HTMLElement>('[data-i18n-aria]').forEach((element) => {
+    const key = element.dataset.i18nAria;
+    if (key) element.setAttribute('aria-label', t(key));
+  });
+  ($<HTMLSelectElement>('language-select')).value = language;
+  $('selection').textContent = t('selected', { count: selectionCount });
+  $('selection-text').textContent = t(selectionCount ? 'selectionReady' : 'chooseLayers');
+  $('generate-grid').textContent = t(showIsometricGrid ? 'hideGrid' : 'showGrid');
+  if (settings.mode === 'perspective') drawPerspectiveControls();
+}
+
+function setLanguage(next: Language): void {
+  language = next;
+  try { localStorage.setItem('vasometric-language', language); } catch { /* Storage may be unavailable in the plugin iframe. */ }
+  applyTranslations();
+}
+
+function localizeNotice(message: string): string {
+  if (message === 'Select one or more layers on the canvas first') return t('chooseLayersToast');
+  if (message === 'Preview reset') return t('previewReset');
+  if (message === 'Could not encode extrusion image' || message === 'Could not prepare extrusion') return t('encodeFailed');
+  const applied = message.match(/^Applied to (\d+) layers?(?: · added (\d+) solid extrusions?)?$/);
+  if (applied) return t('applied', { count: applied[1], extrusions: applied[2] ? t('addedExtrusions', { count: applied[2] }) : '' });
+  const failed = message.match(/^(Apply failed|Action failed):\s*(.*)$/);
+  if (failed) return t(failed[1] === 'Apply failed' ? 'applyFailed' : 'actionFailed', { detail: failed[2] });
+  return message;
+}
 
 const defaults: Settings = {
   mode: 'isometric', panel: 'skew', direction: 'right', angle: 0, depth: 0,
@@ -567,8 +645,8 @@ function setPanel(panel: Panel): void {
 function drawPerspectiveControls(): void {
   const container = $('perspective-controls');
   document.querySelectorAll<HTMLButtonElement>('.subtab').forEach((button) => button.classList.toggle('active', button.dataset.panel === settings.panel));
-  container.innerHTML = controls[settings.panel].map((control) => `<label class="control"><span class="label">${control.label}</span><input type="range" min="${control.min}" max="${control.max}" step="${control.step || 1}" value="${settings[control.key]}" data-key="${control.key}"><output data-output="${control.key}">${formatValue(control.key, Number(settings[control.key]))}</output></label>`).join('')
-    + (settings.panel === '3d' ? '<p class="helper">Rotates around each layer’s center. X tilts vertically, Y turns sideways, and Z spins in the canvas.</p>' : '');
+  container.innerHTML = controls[settings.panel].map((control) => `<label class="control"><span class="label">${t(`control.${control.key}`)}</span><input type="range" min="${control.min}" max="${control.max}" step="${control.step || 1}" value="${settings[control.key]}" data-key="${control.key}"><output data-output="${control.key}">${formatValue(control.key, Number(settings[control.key]))}</output></label>`).join('')
+    + (settings.panel === '3d' ? `<p class="helper">${t('rotateHelp')}</p>` : '');
   bindRangeInputs(container);
 }
 
@@ -633,7 +711,7 @@ function resetAll(): void {
   Object.assign(settings, defaults);
   showIsometricGrid = false;
   const gridButton = $('generate-grid');
-  gridButton.textContent = 'Show 3D cube grid';
+  gridButton.textContent = t('showGrid');
   gridButton.setAttribute('aria-pressed', 'false');
   gridButton.classList.remove('selected');
   document.querySelectorAll('.mode').forEach((button) => button.classList.toggle('active', (button as HTMLElement).dataset.mode === 'isometric'));
@@ -664,31 +742,32 @@ $('reset').addEventListener('click', resetAll);
 $('apply').addEventListener('click', () => {
   const button = $('apply') as HTMLButtonElement;
   button.disabled = true;
-  void buildExtrusions().then((extrusions) => post({ type: 'apply', settings: { ...settings }, extrusions })).catch((error: unknown) => showToast(error instanceof Error ? error.message : 'Could not prepare extrusion')).finally(() => { button.disabled = false; });
+  void buildExtrusions().then((extrusions) => post({ type: 'apply', settings: { ...settings }, extrusions })).catch((error: unknown) => showToast(error instanceof Error ? error.message : t('encodeFailed'))).finally(() => { button.disabled = false; });
 });
 $('generate-grid').addEventListener('click', () => {
   showIsometricGrid = !showIsometricGrid;
   const button = $('generate-grid');
-  button.textContent = showIsometricGrid ? 'Hide 3D cube grid' : 'Show 3D cube grid';
+  button.textContent = t(showIsometricGrid ? 'hideGrid' : 'showGrid');
   button.setAttribute('aria-pressed', String(showIsometricGrid));
   button.classList.toggle('selected', showIsometricGrid);
   refreshOverlays();
   drawLayerPreview();
 });
-$('close').addEventListener('click', () => post({ type: 'cancel' }));
+($<HTMLSelectElement>('language-select')).addEventListener('change', (event) => setLanguage((event.currentTarget as HTMLSelectElement).value as Language));
 window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; text?: string } & PreviewMessage }>) => {
   const message = event.data.pluginMessage;
   if (!message) return;
   if (message.type === 'layer-preview') void loadLayerPreview(message);
   if (message.type === 'selection') {
-    const count = Number(message.count || 0);
-    $('selection').textContent = `${count} selected`;
-    $('selection').classList.toggle('ready', count > 0);
-    $('selection-text').textContent = count ? 'Showing the selected layers in this preview' : 'Choose layers on the canvas';
+    selectionCount = Number(message.count || 0);
+    $('selection').textContent = t('selected', { count: selectionCount });
+    $('selection').classList.toggle('ready', selectionCount > 0);
+    $('selection-text').textContent = t(selectionCount ? 'selectionReady' : 'chooseLayers');
   }
-  if (message.type === 'notice') showToast(message.text || String(message.count || 'Done'));
+  if (message.type === 'notice') showToast(localizeNotice(message.text || String(message.count || t('done'))));
 };
 
+applyTranslations();
 bindRangeInputs();
 drawPerspectiveControls();
 drawLayerPreview();

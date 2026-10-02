@@ -21,8 +21,11 @@
       .mark svg { width: 36px; height: 36px; }
       .brand { color: #1d1b20; font-size: 15px; font-weight: 650; letter-spacing: .01em; }
       .subtitle { margin-top: 3px; color: #625d69; font-size: 10px; letter-spacing: .03em; }
-      .close { width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: #49454f; font-size: 20px; cursor: pointer; }
-      .close:hover { background: #e9e5ed; }
+      .language-control { position: relative; display: inline-flex; align-items: center; min-width: 118px; height: 36px; padding: 0 34px 0 12px; border: 1px solid #79747e; border-radius: 8px; color: #49454f; background: #f7f5fa; }
+      .language-control:hover { background: #f0edf4; }
+      .language-control:focus-within { border: 2px solid #6750a4; padding-left: 11px; }
+      .language-control select { width: 100%; height: 100%; appearance: none; border: 0; outline: 0; color: inherit; background: transparent; cursor: pointer; font-size: 12px; font-weight: 600; }
+      .language-control svg { position: absolute; right: 9px; width: 18px; height: 18px; fill: currentColor; pointer-events: none; }
       main { padding: 10px 18px 16px; display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 14px; }
       .modebar { display: grid; grid-template-columns: repeat(2, 1fr); padding: 4px; border: 1px solid #79747e; border-radius: 22px; background: #f7f5fa; }
       .mode { height: 34px; border: 0; border-radius: 18px; color: #49454f; background: transparent; cursor: pointer; font-size: 11px; font-weight: 600; }
@@ -77,39 +80,45 @@
     <div id="app">
       <header class="topbar">
         <div class="identity"><div class="mark" aria-hidden="true"><!-- APP_ICON --></div><div class="brand">Vasometric</div></div>
-        <button class="close" id="close" aria-label="Close">×</button>
+        <label class="language-control" aria-label="Language">
+          <select id="language-select" aria-label="Language">
+            <option value="en">English</option>
+            <option value="zh-CN">简体中文</option>
+          </select>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5z"/></svg>
+        </label>
       </header>
       <main>
-        <nav class="modebar" aria-label="Transform mode">
-          <button class="mode active" data-mode="isometric">Axonometric</button>
-          <button class="mode" data-mode="perspective">Perspective</button>
+        <nav class="modebar" aria-label="Transform mode" data-i18n-aria="aria.transformMode">
+          <button class="mode active" data-mode="isometric" data-i18n="mode.axonometric">Axonometric</button>
+          <button class="mode" data-mode="perspective" data-i18n="mode.perspective">Perspective</button>
         </nav>
         <section class="stage">
-          <div class="stage-head">Canvas preview</div>
-          <canvas id="preview" aria-label="Selected layer transform preview"></canvas>
-          <div class="empty-preview" id="empty-preview">Select a layer to see its live preview</div>
+          <div class="stage-head" data-i18n="canvasPreview">Canvas preview</div>
+          <canvas id="preview" aria-label="Selected layer transform preview" data-i18n-aria="aria.preview"></canvas>
+          <div class="empty-preview" id="empty-preview" data-i18n="emptyPreview">Select a layer to see its live preview</div>
         </section>
-        <div class="selectionline"><span id="selection-text">Choose layers on the canvas</span><span class="selectionbadge" id="selection">0 selected</span></div>
+        <div class="selectionline"><span id="selection-text" data-i18n="chooseLayers">Choose layers on the canvas</span><span class="selectionbadge" id="selection">0 selected</span></div>
         <section class="mode-panel" id="isometric-panel">
           <div class="directions" id="directions">
-            <button class="direction" data-direction="left">← Left</button><button class="direction" data-direction="top-left">↙ Top left</button><button class="direction active" data-direction="right">Right →</button><button class="direction" data-direction="top-right">Top right ↘</button>
+            <button class="direction" data-direction="left" data-i18n="direction.left">← Left</button><button class="direction" data-direction="top-left" data-i18n="direction.topLeft">↙ Top left</button><button class="direction active" data-direction="right" data-i18n="direction.right">Right →</button><button class="direction" data-direction="top-right" data-i18n="direction.topRight">Top right ↘</button>
           </div>
           <div class="control-card">
-            <div class="control angle-control"><label class="label" for="angle-range">Angle</label><input id="angle-range" type="range" min="-180" max="180" step="1" value="0" data-key="angle"><div class="angle-entry"><input id="angle-input" type="number" min="-180" max="180" step="1" value="0" data-key="angle" aria-label="Angle in degrees"><span aria-hidden="true">°</span></div></div>
-            <div class="quickrow"><span>Snap</span><button class="quick active" data-angle="0">0°</button><button class="quick" data-angle="30">30°</button><button class="quick" data-angle="45">45°</button></div>
-            <label class="control"><span class="label">Extrude depth</span><input type="range" min="0" max="200" value="0" data-key="depth"><output data-output="depth">0 px</output></label>
-            <div class="helper">Angle rotates each face in the canvas plane; 0° keeps the standard isometric view. To assemble a cube, use equal square faces, the same angle, and depth 0.</div>
+            <div class="control angle-control"><label class="label" for="angle-range" data-i18n="angle">Angle</label><input id="angle-range" type="range" min="-180" max="180" step="1" value="0" data-key="angle"><div class="angle-entry"><input id="angle-input" type="number" min="-180" max="180" step="1" value="0" data-key="angle" aria-label="Angle in degrees" data-i18n-aria="aria.angle"><span aria-hidden="true">°</span></div></div>
+            <div class="quickrow"><span data-i18n="snap">Snap</span><button class="quick active" data-angle="0">0°</button><button class="quick" data-angle="30">30°</button><button class="quick" data-angle="45">45°</button></div>
+            <label class="control"><span class="label" data-i18n="extrudeDepth">Extrude depth</span><input type="range" min="0" max="200" value="0" data-key="depth"><output data-output="depth">0 px</output></label>
+            <div class="helper" data-i18n="isometricHelp">Angle rotates each face in the canvas plane; 0° keeps the standard isometric view. To assemble a cube, use equal square faces, the same angle, and depth 0.</div>
           </div>
-          <button class="secondary" id="generate-grid" aria-pressed="false">Show 3D cube grid</button>
+          <button class="secondary" id="generate-grid" aria-pressed="false" data-i18n="showGrid">Show 3D cube grid</button>
         </section>
         <section class="mode-panel" id="perspective-panel" hidden>
-          <nav class="subtabs" aria-label="Perspective tools">
-            <button class="subtab active" data-panel="skew">Skew</button><button class="subtab" data-panel="3d">3D</button><button class="subtab" data-panel="camera">Camera</button><button class="subtab" data-panel="extrusion">Extrude</button><button class="subtab" data-panel="shadow">Shadow</button>
+          <nav class="subtabs" aria-label="Perspective tools" data-i18n-aria="aria.perspectiveTools">
+            <button class="subtab active" data-panel="skew" data-i18n="panel.skew">Skew</button><button class="subtab" data-panel="3d">3D</button><button class="subtab" data-panel="camera" data-i18n="panel.camera">Camera</button><button class="subtab" data-panel="extrusion" data-i18n="panel.extrude">Extrude</button><button class="subtab" data-panel="shadow" data-i18n="panel.shadow">Shadow</button>
           </nav>
           <div class="control-card" id="perspective-controls"></div>
         </section>
         <div class="grow"></div>
-        <footer class="dock"><button id="reset">Reset preview</button><button class="apply" id="apply">Apply to selection</button></footer>
+        <footer class="dock"><button id="reset" data-i18n="reset">Reset preview</button><button class="apply" id="apply" data-i18n="apply">Apply to selection</button></footer>
       </main>
       <div class="toast" id="toast"></div>
     </div>
