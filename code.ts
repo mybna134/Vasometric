@@ -48,8 +48,8 @@ if (figma.editorType !== 'figma') {
     }
     const previews = await Promise.all(nodes.map(async (node): Promise<LayerPreview | null> => {
       try {
-        const bounds = node.absoluteBoundingBox;
-        if (!bounds) return null;
+        const bounds = 'absoluteRenderBounds' in node ? node.absoluteRenderBounds : node.absoluteBoundingBox;
+        if (!bounds || bounds.width <= 0 || bounds.height <= 0) return null;
         const maxPreviewSide = Math.max(128, Math.min(640, 640 / Math.sqrt(nodes.length)));
         const scale = Math.max(0.1, Math.min(4, maxPreviewSide / Math.max(bounds.width, bounds.height, 1)));
         const bytes = await node.exportAsync({ format: 'PNG', constraint: { type: 'SCALE', value: scale } });

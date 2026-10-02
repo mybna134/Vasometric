@@ -532,15 +532,23 @@ function drawPerspectiveControls(): void {
   bindRangeInputs(container);
 }
 
+function setAngle(value: number, syncInput = true): void {
+  settings.angle = Math.max(-180, Math.min(180, Math.round(value)));
+  ($<HTMLInputElement>('angle-range')).value = String(settings.angle);
+  if (syncInput) ($<HTMLInputElement>('angle-input')).value = String(settings.angle);
+  document.querySelectorAll<HTMLButtonElement>('.quick').forEach((button) => button.classList.toggle('active', Number(button.dataset.angle) === settings.angle));
+  emitPreview();
+}
+
 function bindRangeInputs(root: ParentNode = document): void {
   root.querySelectorAll<HTMLInputElement>('input[type="range"][data-key]').forEach((input) => {
     input.oninput = () => {
       const key = input.dataset.key as keyof Settings;
       const next = Number(input.value);
+      if (key === 'angle') { setAngle(next); return; }
       (settings as unknown as Record<string, number | string>)[key] = next;
       const output = root.querySelector<HTMLOutputElement>(`output[data-output="${key}"]`) || document.querySelector<HTMLOutputElement>(`output[data-output="${key}"]`);
       if (output) output.textContent = formatValue(key, next);
-      if (key === 'angle') document.querySelectorAll('.quick').forEach((button) => button.classList.toggle('active', Number((button as HTMLElement).dataset.angle) === next));
       emitPreview();
     };
   });
@@ -565,14 +573,18 @@ document.querySelectorAll<HTMLButtonElement>('.direction').forEach((button) => b
   emitPreview();
 }));
 document.querySelectorAll<HTMLButtonElement>('.quick').forEach((button) => button.addEventListener('click', () => {
-  settings.angle = Number(button.dataset.angle);
-  const range = document.querySelector<HTMLInputElement>('input[data-key="angle"]');
-  if (range) range.value = String(settings.angle);
-  const output = document.querySelector<HTMLOutputElement>('output[data-output="angle"]');
-  if (output) output.textContent = formatValue('angle', settings.angle);
-  document.querySelectorAll('.quick').forEach((item) => item.classList.toggle('active', item === button));
-  emitPreview();
+  setAngle(Number(button.dataset.angle));
 }));
+
+const angleInput = $<HTMLInputElement>('angle-input');
+angleInput.addEventListener('input', () => {
+  const value = angleInput.valueAsNumber;
+  if (Number.isInteger(value) && value >= -180 && value <= 180) setAngle(value, false);
+});
+angleInput.addEventListener('change', () => {
+  const value = angleInput.valueAsNumber;
+  setAngle(Number.isFinite(value) ? value : settings.angle);
+});
 
 function resetAll(): void {
   cancelAnimationFrame(previewAnimation);
