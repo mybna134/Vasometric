@@ -289,27 +289,68 @@ function isPerspectiveView(): boolean {
   return settings.mode === 'perspective';
 }
 
+function removeIsometricGrid(grid: THREE.Group): void {
+  scene.remove(grid);
+  for (const child of grid.children) {
+    const drawable = child as THREE.LineSegments;
+    drawable.geometry.dispose();
+    (drawable.material as THREE.Material).dispose();
+  }
+}
+
 function drawIsometricGrid(): void {
-  const key = '__isometric-grid__';
-  const old = scene.getObjectByName(key);
-  if (old) { scene.remove(old); (old as THREE.LineSegments).geometry.dispose(); ((old as THREE.LineSegments).material as THREE.Material).dispose(); }
-  if (!showIsometricGrid || !isIsometric()) return;
-  const vertices: number[] = [];
-  const extent = Math.hypot(canvasWidth, canvasHeight) * 1.4;
-  const spacing = 36;
-  const rotation = (previewVisual?.planeAngle ?? settings.angle) * Math.PI / 180;
-  for (const angle of [Math.PI / 2 + rotation, Math.PI / 6 + rotation, -Math.PI / 6 + rotation]) {
-    const cos = Math.cos(angle), sin = Math.sin(angle);
-    for (let offset = -extent; offset <= extent; offset += spacing) {
-      const x0 = -extent * cos - offset * sin, y0 = -extent * sin + offset * cos;
-      const x1 = extent * cos - offset * sin, y1 = extent * sin + offset * cos;
-      vertices.push(x0, -y0, -5, x1, -y1, -5);
+  previewCanvas.parentElement?.classList.toggle('grid-visible', showIsometricGrid && isIsometric());
+  const key = '__isometric-cube-grid__';
+  const old = scene.getObjectByName(key) as THREE.Group | undefined;
+  if (!showIsometricGrid || !isIsometric()) {
+    if (old) removeIsometricGrid(old);
+    return;
+  }
+
+  const rotation = -(previewVisual?.planeAngle ?? settings.angle) * Math.PI / 180;
+  if (old && overlayWidth === canvasWidth && overlayHeight === canvasHeight) {
+    old.rotation.z = rotation;
+    return;
+  }
+  if (old) removeIsometricGrid(old);
+
+  // Edge-to-edge hexagons with three spokes make the three visible faces of each cube.
+  const halfWidth = 32, rise = 18;
+  const columnStep = halfWidth * 2, rowStep = rise * 3;
+  const extent = Math.hypot(canvasWidth, canvasHeight) / 2 + columnStep;
+  const corners: [number, number][] = [
+    [0, rise * 2], [halfWidth, rise], [halfWidth, -rise], [0, -rise * 2],
+    [-halfWidth, -rise], [-halfWidth, rise], [0, 0],
+  ];
+  const edges: [number, number][] = [
+    [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0],
+    [6, 1], [6, 3], [6, 5],
+  ];
+  const positions: number[] = [];
+  const seen = new Set<string>();
+  for (let row = -Math.ceil(extent / rowStep); row <= Math.ceil(extent / rowStep); row += 1) {
+    const y = row * rowStep;
+    for (let column = -Math.ceil(extent / columnStep); column <= Math.ceil(extent / columnStep); column += 1) {
+      const x = column * columnStep + (Math.abs(row) % 2) * halfWidth;
+      for (const [a, b] of edges) {
+        const x1 = x + corners[a][0], y1 = y + corners[a][1];
+        const x2 = x + corners[b][0], y2 = y + corners[b][1];
+        const key = x1 < x2 || (x1 === x2 && y1 < y2) ? `${x1},${y1}:${x2},${y2}` : `${x2},${y2}:${x1},${y1}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        positions.push(x1, y1, -5, x2, y2, -5);
+      }
     }
   }
+
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  const grid = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0x77717d, transparent: true, opacity: 0.14, depthTest: false }));
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const grid = new THREE.Group();
   grid.name = key;
+  grid.rotation.z = rotation;
+  const lines = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0xaaa3b2, transparent: true, opacity: 0.22, depthTest: false, depthWrite: false }));
+  lines.renderOrder = -10;
+  grid.add(lines);
   scene.add(grid);
 }
 
@@ -593,7 +634,7 @@ function resetAll(): void {
   Object.assign(settings, defaults);
   showIsometricGrid = false;
   const gridButton = $('generate-grid');
-  gridButton.textContent = 'Show isometric grid in preview';
+  gridButton.textContent = 'Show 3D cube grid';
   gridButton.setAttribute('aria-pressed', 'false');
   gridButton.classList.remove('selected');
   document.querySelectorAll('.mode').forEach((button) => button.classList.toggle('active', (button as HTMLElement).dataset.mode === 'isometric'));
@@ -630,7 +671,7 @@ $('apply').addEventListener('click', () => {
 $('generate-grid').addEventListener('click', () => {
   showIsometricGrid = !showIsometricGrid;
   const button = $('generate-grid');
-  button.textContent = showIsometricGrid ? 'Hide isometric grid' : 'Show isometric grid in preview';
+  button.textContent = showIsometricGrid ? 'Hide 3D cube grid' : 'Show 3D cube grid';
   button.setAttribute('aria-pressed', String(showIsometricGrid));
   button.classList.toggle('selected', showIsometricGrid);
   refreshOverlays();

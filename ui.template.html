@@ -27,6 +27,7 @@
       .mode { height: 34px; border: 0; border-radius: 18px; color: #49454f; background: transparent; cursor: pointer; font-size: 11px; font-weight: 600; }
       .mode.active { color: #fff; background: #6750a4; }
       .stage { position: relative; height: 220px; min-height: 220px; overflow: hidden; border-radius: 18px; background: #eeebf2; }
+      .stage.grid-visible { background: #f5f4f7; }
       .stage-head { position: absolute; z-index: 1; top: 13px; left: 15px; right: 15px; display: flex; justify-content: space-between; color: #625d69; font-size: 10px; font-weight: 600; letter-spacing: .04em; }
       .live { display: flex; align-items: center; gap: 6px; color: #386a20; }
       .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
@@ -100,7 +101,7 @@
             <label class="control"><span class="label">Extrude depth</span><input type="range" min="0" max="200" value="0" data-key="depth"><output data-output="depth">0 px</output></label>
             <div class="helper">Angle rotates each face in the canvas plane; 0° keeps the standard isometric view. To assemble a cube, use equal square faces, the same angle, and depth 0.</div>
           </div>
-          <button class="secondary" id="generate-grid" aria-pressed="false">Show isometric grid in preview</button>
+          <button class="secondary" id="generate-grid" aria-pressed="false">Show 3D cube grid</button>
         </section>
         <section class="mode-panel" id="perspective-panel" hidden>
           <nav class="subtabs" aria-label="Perspective tools">
