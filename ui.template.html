@@ -17,7 +17,8 @@
       #app { min-height: 100vh; display: flex; flex-direction: column; }
       .topbar { min-height: 62px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; background: #f7f5fa; }
       .identity { display: flex; align-items: center; gap: 12px; }
-      .mark { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; color: #fff; background: #6750a4; font-weight: 800; font-size: 16px; }
+      .mark { width: 40px; height: 40px; display: grid; place-items: center; }
+      .mark svg { width: 36px; height: 36px; }
       .brand { color: #1d1b20; font-size: 15px; font-weight: 650; letter-spacing: .01em; }
       .subtitle { margin-top: 3px; color: #625d69; font-size: 10px; letter-spacing: .03em; }
       .close { width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: #49454f; font-size: 20px; cursor: pointer; }
@@ -28,9 +29,7 @@
       .mode.active { color: #fff; background: #6750a4; }
       .stage { position: relative; height: 220px; min-height: 220px; overflow: hidden; border-radius: 18px; background: #eeebf2; }
       .stage.grid-visible { background: #f5f4f7; }
-      .stage-head { position: absolute; z-index: 1; top: 13px; left: 15px; right: 15px; display: flex; justify-content: space-between; color: #625d69; font-size: 10px; font-weight: 600; letter-spacing: .04em; }
-      .live { display: flex; align-items: center; gap: 6px; color: #386a20; }
-      .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+      .stage-head { position: absolute; z-index: 1; top: 13px; left: 15px; color: #625d69; font-size: 10px; font-weight: 600; letter-spacing: .04em; }
       #preview { position: absolute; inset: 30px 15px 9px; width: calc(100% - 30px); height: calc(100% - 39px); }
       .empty-preview { position: absolute; inset: 48% 14px auto; color: #625d69; text-align: center; font-size: 11px; pointer-events: none; }
       .selectionline { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #625d69; font-size: 11px; }
@@ -77,7 +76,7 @@
   <body>
     <div id="app">
       <header class="topbar">
-        <div class="identity"><div class="mark">A</div><div class="brand">Vasometric</div></div>
+        <div class="identity"><div class="mark" aria-hidden="true"><!-- APP_ICON --></div><div class="brand">Vasometric</div></div>
         <button class="close" id="close" aria-label="Close">×</button>
       </header>
       <main>
@@ -86,7 +85,7 @@
           <button class="mode" data-mode="perspective">Perspective</button>
         </nav>
         <section class="stage">
-          <div class="stage-head"><span>Canvas preview</span><span class="live" id="live-state">LIVE</span></div>
+          <div class="stage-head">Canvas preview</div>
           <canvas id="preview" aria-label="Selected layer transform preview"></canvas>
           <div class="empty-preview" id="empty-preview">Select a layer to see its live preview</div>
         </section>

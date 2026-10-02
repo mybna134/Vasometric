@@ -546,7 +546,6 @@ async function buildExtrusions(): Promise<Array<{ id: string; bytes: Uint8Array;
 
 function emitPreview(): void {
   animatePreview();
-  post({ type: 'preview', settings: { ...settings } });
 }
 
 function setMode(mode: Mode): void {
@@ -641,7 +640,6 @@ function resetAll(): void {
   document.querySelectorAll('.direction').forEach((button) => button.classList.toggle('active', (button as HTMLElement).dataset.direction === 'right'));
   document.querySelectorAll('.quick').forEach((button) => button.classList.toggle('active', (button as HTMLElement).dataset.angle === '0'));
   $('isometric-panel').hidden = false; $('perspective-panel').hidden = true;
-  $('live-state').textContent = 'LIVE';
   document.querySelectorAll<HTMLInputElement>('input[data-key]').forEach((input) => {
     const key = input.dataset.key as keyof Settings;
     const next = defaults[key];
@@ -688,7 +686,6 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?
     $('selection').classList.toggle('ready', count > 0);
     $('selection-text').textContent = count ? 'Showing the selected layers in this preview' : 'Choose layers on the canvas';
   }
-  if (message.type === 'preview-state') $('live-state').textContent = message.text || 'LIVE';
   if (message.type === 'notice') showToast(message.text || String(message.count || 'Done'));
 };
 

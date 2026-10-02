@@ -180,11 +180,6 @@ if (figma.editorType !== 'figma') {
     return depth > 0 ? addExtrusionBitmaps(nodes, bitmaps) : 0;
   }
 
-  function preview(_settings: PluginSettings): void {
-    const count = figma.currentPage.selection.length;
-    figma.ui.postMessage({ type: 'preview-state', text: count ? 'PREVIEW · APPLY TO COMMIT' : 'PREVIEW · NO SELECTION' });
-  }
-
   function commit(settings: PluginSettings, bitmaps: readonly ExtrusionBitmap[] = []): void {
     const nodes = selectedNodes();
     if (!nodes.length) { notice('Select one or more layers on the canvas first'); return; }
@@ -202,7 +197,6 @@ if (figma.editorType !== 'figma') {
     try {
       if (message.type === 'cancel') { figma.closePlugin(); return; }
       if (message.type === 'reset') { notice('Preview reset'); return; }
-      if (message.type === 'preview' && message.settings) { preview(message.settings); return; }
       if (message.type === 'apply' && message.settings) { commit(message.settings, (message as PluginMessage & { extrusions?: ExtrusionBitmap[] }).extrusions || []); return; }
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unexpected plugin error';
