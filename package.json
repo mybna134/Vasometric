@@ -1,0 +1,29 @@
+{
+  "name": "Vasometric",
+  "version": "1.0.0",
+  "description": "Isometric and perspective drawing toolkit for Figma",
+  "main": "dist/code.js",
+  "scripts": {
+    "build": "bun run build:plugin && bun run build:ui",
+    "build:plugin": "tsc -p tsconfig.json",
+    "build:ui": "bun run check:ui && bun build-ui.ts",
+    "check:ui": "tsc -p tsconfig.ui.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "watch": "bun run build:plugin -- --watch"
+  },
+  "author": "",
+  "license": "",
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@figma/eslint-plugin-figma-plugins": "*",
+    "@figma/plugin-typings": "*",
+    "@types/three": "^0.186.0",
+    "eslint": "^9.39.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.1"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  }
+}

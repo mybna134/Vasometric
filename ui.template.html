@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vasometric</title>
+    <style>
+      :root { color-scheme: light; font-family: Roboto, "Segoe UI", Arial, sans-serif; font-size: 12px; color: #1d1b20; background: #f7f5fa; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #f7f5fa; }
+      button, input { font: inherit; }
+      button { color: inherit; transform-origin: center; transition: background-color .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .12s ease; }
+      button:active { transform: scale(.95); }
+      button.clicked { animation: button-click .24s ease-out; }
+      @keyframes button-click { 0% { transform: scale(.95); } 65% { transform: scale(1.035); } 100% { transform: scale(1); } }
+      @media (prefers-reduced-motion: reduce) { button { transition: none; } button.clicked { animation: none; } }
+      #app { min-height: 100vh; display: flex; flex-direction: column; }
+      .topbar { min-height: 62px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; background: #f7f5fa; }
+      .identity { display: flex; align-items: center; gap: 12px; }
+      .mark { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; color: #fff; background: #6750a4; font-weight: 800; font-size: 16px; }
+      .brand { color: #1d1b20; font-size: 15px; font-weight: 650; letter-spacing: .01em; }
+      .subtitle { margin-top: 3px; color: #625d69; font-size: 10px; letter-spacing: .03em; }
+      .close { width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: #49454f; font-size: 20px; cursor: pointer; }
+      .close:hover { background: #e9e5ed; }
+      main { padding: 10px 18px 16px; display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 14px; }
+      .modebar { display: grid; grid-template-columns: repeat(2, 1fr); padding: 4px; border: 1px solid #79747e; border-radius: 22px; background: #f7f5fa; }
+      .mode { height: 34px; border: 0; border-radius: 18px; color: #49454f; background: transparent; cursor: pointer; font-size: 11px; font-weight: 600; }
+      .mode.active { color: #fff; background: #6750a4; }
+      .stage { position: relative; height: 220px; min-height: 220px; overflow: hidden; border-radius: 18px; background: #eeebf2; }
+      .stage-head { position: absolute; z-index: 1; top: 13px; left: 15px; right: 15px; display: flex; justify-content: space-between; color: #625d69; font-size: 10px; font-weight: 600; letter-spacing: .04em; }
+      .live { display: flex; align-items: center; gap: 6px; color: #386a20; }
+      .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+      #preview { position: absolute; inset: 30px 15px 9px; width: calc(100% - 30px); height: calc(100% - 39px); }
+      .empty-preview { position: absolute; inset: 48% 14px auto; color: #625d69; text-align: center; font-size: 11px; pointer-events: none; }
+      .selectionline { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #625d69; font-size: 11px; }
+      .selectionbadge { padding: 6px 11px; border-radius: 8px; color: #49454f; background: #e9e5ed; font-weight: 600; white-space: nowrap; }
+      .selectionbadge.ready { color: #21005d; background: #e8def8; }
+      .mode-panel { display: flex; flex-direction: column; gap: 12px; }
+      .directions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+      .direction { min-height: 37px; border: 1px solid #79747e; border-radius: 9px; color: #49454f; background: transparent; cursor: pointer; font-size: 10px; font-weight: 600; }
+      .direction.active { border-color: #6750a4; color: #21005d; background: #e8def8; }
+      .subtabs { display: flex; gap: 2px; border-bottom: 1px solid #c9c5cd; }
+      .subtab { position: relative; min-height: 34px; padding: 0 10px; border: 0; color: #625d69; background: transparent; cursor: pointer; }
+      .subtab.active { color: #6750a4; font-weight: 650; }
+      .subtab.active::after { position: absolute; right: 8px; bottom: -1px; left: 8px; height: 2px; content: ""; background: #6750a4; }
+      .control-card { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 9px; border-radius: 14px; background: #f0edf4; }
+      .control { display: grid; grid-template-columns: 84px 1fr 48px; align-items: center; gap: 9px; min-height: 34px; }
+      .label { color: #49454f; }
+      .control output { color: #1d1b20; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+      input[type=range] { width: 100%; height: 4px; margin: 0; appearance: none; border-radius: 4px; background: #c8c3cf; outline: none; }
+      input[type=range]::-webkit-slider-thumb { width: 16px; height: 16px; appearance: none; border: 0; border-radius: 50%; background: #6750a4; box-shadow: 0 0 0 5px #6750a41c; cursor: ew-resize; }
+      .quickrow { display: grid; grid-template-columns: 84px repeat(3, 1fr); align-items: center; gap: 8px; color: #49454f; }
+      .quick { height: 31px; border: 1px solid #79747e; border-radius: 18px; color: #49454f; background: transparent; cursor: pointer; }
+      .quick.active { border-color: #6750a4; color: #21005d; background: #e8def8; }
+      .secondary { min-height: 38px; border: 0; border-radius: 10px; color: #21005d; background: #e8def8; cursor: pointer; font-weight: 650; }
+      .secondary:hover, .quick:hover, .direction:hover { filter: brightness(.97); }
+      .secondary.selected { outline: 2px solid #6750a4; outline-offset: 1px; }
+      .helper { color: #625d69; font-size: 10px; line-height: 1.45; }
+      .grow { flex: 1; min-height: 0; }
+      .dock { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 2px; }
+      .dock button { height: 40px; border: 1px solid #79747e; border-radius: 20px; color: #6750a4; background: transparent; cursor: pointer; font-weight: 650; }
+      .dock button:hover { background: #f0edf4; }
+      .dock .apply { border-color: #6750a4; color: #fff; background: #6750a4; box-shadow: 0 2px 4px #0002; }
+      .dock .apply:hover { background: #5b4596; }
+      .toast { position: fixed; z-index: 3; right: 18px; bottom: 70px; left: 18px; padding: 10px 13px; border-radius: 8px; color: #f5efff; background: #322f35; text-align: center; opacity: 0; transform: translateY(8px); transition: .18s ease; pointer-events: none; }
+      .toast.show { opacity: 1; transform: translateY(0); }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="identity"><div class="mark">A</div><div class="brand">Vasometric</div></div>
+        <button class="close" id="close" aria-label="Close">×</button>
+      </header>
+      <main>
+        <nav class="modebar" aria-label="Transform mode">
+          <button class="mode active" data-mode="isometric">Axonometric</button>
+          <button class="mode" data-mode="perspective">Perspective</button>
+        </nav>
+        <section class="stage">
+          <div class="stage-head"><span>Canvas preview</span><span class="live" id="live-state">LIVE</span></div>
+          <canvas id="preview" aria-label="Selected layer transform preview"></canvas>
+          <div class="empty-preview" id="empty-preview">Select a layer to see its live preview</div>
+        </section>
+        <div class="selectionline"><span id="selection-text">Choose layers on the canvas</span><span class="selectionbadge" id="selection">0 selected</span></div>
+        <section class="mode-panel" id="isometric-panel">
+          <div class="directions" id="directions">
+            <button class="direction" data-direction="left">← Left</button><button class="direction" data-direction="top-left">↙ Top left</button><button class="direction active" data-direction="right">Right →</button><button class="direction" data-direction="top-right">Top right ↘</button>
+          </div>
+          <div class="control-card">
+            <label class="control"><span class="label">Angle</span><input type="range" min="-180" max="180" value="0" data-key="angle"><output data-output="angle">0°</output></label>
+            <div class="quickrow"><span>Snap</span><button class="quick active" data-angle="0">0°</button><button class="quick" data-angle="30">30°</button><button class="quick" data-angle="45">45°</button></div>
+            <label class="control"><span class="label">Extrude depth</span><input type="range" min="0" max="200" value="0" data-key="depth"><output data-output="depth">0 px</output></label>
+            <div class="helper">Angle rotates each face in the canvas plane; 0° keeps the standard isometric view. To assemble a cube, use equal square faces, the same angle, and depth 0.</div>
+          </div>
+          <button class="secondary" id="generate-grid" aria-pressed="false">Show isometric grid in preview</button>
+        </section>
+        <section class="mode-panel" id="perspective-panel" hidden>
+          <nav class="subtabs" aria-label="Perspective tools">
+            <button class="subtab active" data-panel="skew">Skew</button><button class="subtab" data-panel="3d">3D</button><button class="subtab" data-panel="camera">Camera</button><button class="subtab" data-panel="extrusion">Extrude</button><button class="subtab" data-panel="shadow">Shadow</button>
+          </nav>
+          <div class="control-card" id="perspective-controls"></div>
+        </section>
+        <div class="grow"></div>
+        <footer class="dock"><button id="reset">Reset preview</button><button class="apply" id="apply">Apply to selection</button></footer>
+      </main>
+      <div class="toast" id="toast"></div>
+    </div>
+    <!-- BUN_UI_BUNDLE -->
+  </body>
+</html>
