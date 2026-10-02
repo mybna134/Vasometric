@@ -1,13 +1,7 @@
-<table width="100%" bgcolor="#ffffff" role="presentation">
-<tr><td align="center" bgcolor="#ffffff">
-  <p>
+<div align="center">
   <img src="readme-header.svg" width="530" height="88" alt="Vasometric">
-  </p>
-</td></tr>
-<tr><td align="center" bgcolor="#ffffff">
-  <p align="right"><font color="#000000">Figma 等轴测与透视绘图工具</font></p>
-</td></tr>
-</table>
+</div>
+<p align="right">Figma 等轴测与透视绘图工具</p>
 
 <div align="center">
   <p>
@@ -16,7 +10,7 @@
   <img src="https://img.shields.io/badge/Figma-Plugin-8C4FFF?style=flat-square&logo=figma" alt="Figma plugin">
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Bun-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mybna134/Vasometric?style=flat-square&label=License" alt="GPL-3.0-only license"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0--only-2ea44f?style=flat-square" alt="GPL-3.0-only license"></a>
   </p>
   <p>
   <a href="README.md"><img src="https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-0A66C2?style=flat-square" alt="简体中文"></a>
