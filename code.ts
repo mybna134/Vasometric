@@ -33,6 +33,9 @@ type PreviewBounds = { x: number; y: number; width: number; height: number };
 type TracedPath = { path: string; x: number; y: number };
 type ExtrusionVector = { id: string; body: TracedPath | null; outline: TracedPath | null; dx: number; dy: number };
 type OriginalState = { version: 1; width: number; height: number; transform: Transform; effects?: Effect[]; extrusionIds: string[] };
+type HistoryAction =
+  | { type: 'apply'; beforeIds: string[]; afterIds: string[]; settings: PluginSettings; extrusions: ExtrusionVector[] }
+  | { type: 'restore'; beforeIds: string[]; afterIds: string[] };
 
 const ORIGINAL_KEY = 'vasometric-original-v1';
 const EXTRUSION_SOURCE_KEY = 'vasometric-extrusion-source';
@@ -47,6 +50,28 @@ if (figma.editorType !== 'figma') {
   const selectedNodes = (): SceneNode[] => [...figma.currentPage.selection];
   const notice = (text: string): void => figma.ui.postMessage({ type: 'notice', text });
   let previewRevision = 0;
+  const undoHistory: HistoryAction[] = [];
+  const redoHistory: HistoryAction[] = [];
+  const redoneIds = new Map<string, string>();
+
+  function sendHistory(): void {
+    figma.ui.postMessage({ type: 'history', undo: undoHistory.length, redo: redoHistory.length });
+  }
+
+  function recordHistory(action: HistoryAction): void {
+    undoHistory.push(action);
+    redoHistory.length = 0;
+    redoneIds.clear();
+    sendHistory();
+  }
+
+  async function selectHistoryNodes(ids: readonly string[]): Promise<boolean> {
+    const nodes = await Promise.all(ids.map((id) => figma.getNodeByIdAsync(redoneIds.get(id) || id)));
+    const selected = nodes.filter((node): node is SceneNode => node !== null && 'visible' in node);
+    if (selected.length !== ids.length) return false;
+    figma.currentPage.selection = selected;
+    return true;
+  }
 
   function readOriginal(node: SceneNode): OriginalState | null {
     const data = node.getPluginData(ORIGINAL_KEY);
@@ -291,22 +316,26 @@ if (figma.editorType !== 'figma') {
     return depth > 0 ? addExtrusionVectors(nodes, extrusions, settings) : 0;
   }
 
-  function commit(settings: PluginSettings, extrusions: readonly ExtrusionVector[] = []): void {
+  function commit(settings: PluginSettings, extrusions: readonly ExtrusionVector[] = [], record = true): HistoryAction | null {
     const nodes = selectedNodes();
-    if (!nodes.length) { notice('Select one or more layers on the canvas first'); return; }
+    if (!nodes.length) { notice('Select one or more layers on the canvas first'); return null; }
     try {
       const count = applySettings(nodes, settings, extrusions);
       figma.commitUndo();
+      const action: HistoryAction = { type: 'apply', beforeIds: nodes.map((node) => node.id), afterIds: selectedNodes().map((node) => node.id), settings: { ...settings }, extrusions: [...extrusions] };
+      if (record) recordHistory(action);
       notice(`Applied to ${nodes.length} layer${nodes.length === 1 ? '' : 's'}${count ? ` · added ${count} solid extrusion${count === 1 ? '' : 's'}` : ''}`);
+      return action;
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Could not apply this transform';
       notice(`Apply failed: ${detail}`);
+      return null;
     } finally {
       void sendSelection();
     }
   }
 
-  async function restoreSelection(): Promise<void> {
+  async function restoreSelection(record = true): Promise<HistoryAction | null> {
     const nodes = selectedNodes();
     const nextSelection: SceneNode[] = [];
     let restored = 0;
@@ -339,9 +368,44 @@ if (figma.editorType !== 'figma') {
     if (restored) {
       figma.currentPage.selection = nextSelection;
       figma.commitUndo();
+      const action: HistoryAction = { type: 'restore', beforeIds: nodes.map((node) => node.id), afterIds: nextSelection.map((node) => node.id) };
+      if (record) recordHistory(action);
+      notice(`Restored ${restored} layer${restored === 1 ? '' : 's'}`);
+      await sendSelection();
+      return action;
     }
-    notice(restored ? `Restored ${restored} layer${restored === 1 ? '' : 's'}` : 'No saved transform for the selected layers');
+    notice('No saved transform for the selected layers');
     await sendSelection();
+    return null;
+  }
+
+  async function undoAction(): Promise<void> {
+    const action = undoHistory[undoHistory.length - 1];
+    if (!action) return;
+    figma.triggerUndo();
+    undoHistory.pop();
+    redoHistory.push(action);
+    redoneIds.clear();
+    await selectHistoryNodes(action.beforeIds);
+    sendHistory();
+    await sendSelection();
+  }
+
+  async function redoAction(): Promise<void> {
+    const action = redoHistory[redoHistory.length - 1];
+    if (!action) return;
+    if (!await selectHistoryNodes(action.beforeIds)) {
+      notice('Cannot redo: the original layers are unavailable');
+      return;
+    }
+    const replayed = action.type === 'apply' ? commit(action.settings, action.extrusions, false) : await restoreSelection(false);
+    if (!replayed) return;
+    redoHistory.pop();
+    undoHistory.push(replayed);
+    action.afterIds.forEach((id, index) => {
+      if (replayed.afterIds[index]) redoneIds.set(id, replayed.afterIds[index]);
+    });
+    sendHistory();
   }
 
   figma.on('selectionchange', sendSelection);
@@ -350,6 +414,8 @@ if (figma.editorType !== 'figma') {
       if (message.type === 'cancel') { figma.closePlugin(); return; }
       if (message.type === 'reset') { notice('Preview reset'); return; }
       if (message.type === 'restore') { await restoreSelection(); return; }
+      if (message.type === 'undo') { await undoAction(); return; }
+      if (message.type === 'redo') { await redoAction(); return; }
       if (message.type === 'apply' && message.settings) { commit(message.settings, (message as PluginMessage & { extrusions?: ExtrusionVector[] }).extrusions || []); return; }
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unexpected plugin error';
@@ -359,4 +425,5 @@ if (figma.editorType !== 'figma') {
   };
 
   sendSelection();
+  sendHistory();
 }

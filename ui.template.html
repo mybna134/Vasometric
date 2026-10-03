@@ -47,10 +47,19 @@
       .subtab.active { color: #6750a4; font-weight: 650; }
       .subtab.active::after { position: absolute; right: 8px; bottom: -1px; left: 8px; height: 2px; content: ""; background: #6750a4; }
       .control-card { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 9px; border-radius: 14px; background: #f0edf4; }
-      .control { display: grid; grid-template-columns: 84px 1fr 48px; align-items: center; gap: 9px; min-height: 34px; }
-      .angle-control { grid-template-columns: 84px 1fr 64px; }
+      .control { display: grid; grid-template-columns: 84px minmax(0, 1fr) 92px; align-items: center; gap: 9px; min-height: 34px; }
+      .angle-control { grid-template-columns: 84px minmax(0, 1fr) 92px; }
       .label { color: #49454f; }
-      .control output { color: #1d1b20; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+      .value-field { display: flex; align-items: center; min-width: 0; height: 30px; padding: 0 5px 0 2px; border: 1px solid transparent; border-radius: 6px; color: #1d1b20; background: #e9e5ed; }
+      .value-field:hover { background: #e2dee6; }
+      .value-field:focus-within { border-color: #6750a4; background: #fff; }
+      .value-drag { display: grid; flex: none; place-items: center; width: 23px; height: 24px; padding: 0; border: 0; border-radius: 4px; color: #625d69; background: transparent; cursor: ns-resize; touch-action: none; }
+      .value-drag:hover { color: #21005d; background: #d9d2e3; }
+      .value-drag svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+      .value-field input { flex: 1; width: 0; min-width: 0; height: 100%; padding: 0 2px; border: 0; outline: 0; color: inherit; background: transparent; text-align: right; font-size: 11px; font-variant-numeric: tabular-nums; }
+      .value-field input[type=number] { appearance: textfield; }
+      .value-field input::-webkit-inner-spin-button, .value-field input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+      .value-unit { flex: none; color: #625d69; font-size: 10px; }
       .extrusion-options { display: flex; flex-direction: column; gap: 9px; margin-top: 4px; padding-top: 11px; border-top: 1px solid #c9c5cd; }
       .extrusion-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .option-toggle { display: flex; align-items: center; gap: 8px; min-height: 30px; color: #49454f; cursor: pointer; }
@@ -80,22 +89,21 @@
       .picker-strips .color-swatch { width: 30px; height: 29px; }
       .picker-channels { display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 12px; }
       .picker-channels label { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #625d69; font-size: 10px; }
-      .picker-channels input { width: 100%; height: 30px; padding: 0 3px; border: 1px solid #79747e; border-radius: 6px; color: #1d1b20; background: #fff; text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; }
-      .picker-channels input::-webkit-inner-spin-button, .picker-channels input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+      .picker-channels .value-field { width: 100%; padding-right: 3px; }
+      .picker-channels .value-drag { width: 17px; }
+      .picker-channels .value-drag svg { width: 12px; height: 12px; }
+      .picker-channels .value-field input { font-size: 10px; }
+      .picker-channels .hex-field { padding-left: 3px; }
+      .picker-channels .hex-field input { text-align: center; }
       .picker-rgba-field { display: grid; grid-template-columns: 36px 1fr; align-items: center; gap: 7px; margin-top: 8px; color: #625d69; font-size: 10px; }
-      .picker-rgba-field input { width: 100%; height: 29px; padding: 0 7px; border: 1px solid #79747e; border-radius: 6px; color: #1d1b20; background: #fff; font-size: 11px; font-variant-numeric: tabular-nums; }
-      .color-popover input:focus { border-color: #6750a4; outline: 1px solid #6750a4; }
-      .color-popover input[aria-invalid="true"] { border-color: #b3261e; outline-color: #b3261e; }
+      .picker-rgba-field .value-field { height: 30px; }
+      .picker-rgba-field input { text-align: left; }
+      .color-popover .value-field:has(input[aria-invalid="true"]) { border-color: #b3261e; }
       .picker-material { margin-top: 12px; padding-top: 10px; border-top: 1px solid #c9c5cd; }
       .picker-material-title { display: block; margin-bottom: 8px; color: #625d69; font-size: 10px; }
       .picker-material-colors { display: flex; gap: 6px; overflow-x: auto; padding: 2px 1px 4px; }
       .picker-material-colors button { flex: none; width: 22px; height: 22px; padding: 0; border: 1px solid #0002; border-radius: 6px; cursor: pointer; }
       .picker-material-colors button[aria-pressed="true"] { outline: 2px solid #6750a4; outline-offset: 1px; }
-      .angle-entry { position: relative; }
-      .angle-entry input { width: 100%; height: 28px; padding: 0 17px 0 4px; appearance: textfield; border: 1px solid #79747e; border-radius: 6px; color: #1d1b20; background: #fff; text-align: right; font-variant-numeric: tabular-nums; }
-      .angle-entry input::-webkit-inner-spin-button, .angle-entry input::-webkit-outer-spin-button { appearance: none; margin: 0; }
-      .angle-entry input:focus { border-color: #6750a4; outline: 1px solid #6750a4; }
-      .angle-entry span { position: absolute; top: 50%; right: 7px; transform: translateY(-50%); pointer-events: none; }
       input[type=range] { width: 100%; height: 4px; margin: 0; appearance: none; border-radius: 4px; background: #c8c3cf; outline: none; }
       input[type=range]::-webkit-slider-thumb { width: 16px; height: 16px; appearance: none; border: 0; border-radius: 50%; background: #6750a4; box-shadow: 0 0 0 5px #6750a41c; cursor: ew-resize; }
       .quickrow { display: grid; grid-template-columns: 84px repeat(3, 1fr); align-items: center; gap: 8px; color: #49454f; }
@@ -106,13 +114,30 @@
       .secondary.selected { outline: 2px solid #6750a4; outline-offset: 1px; }
       .helper { color: #625d69; font-size: 10px; line-height: 1.45; }
       .grow { flex: 1; min-height: 0; }
-      .dock { position: sticky; z-index: 2; bottom: 0; display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px; padding-top: 8px; background: #f7f5fa; }
-      .dock button { height: 40px; border: 1px solid #79747e; border-radius: 20px; color: #6750a4; background: transparent; cursor: pointer; font-weight: 650; }
-      .dock button:hover { background: #f0edf4; }
+      .dock { position: sticky; z-index: 4; bottom: 0; display: grid; grid-template-columns: 40px 1fr 1.25fr; align-items: center; gap: 8px; padding: 8px 0 4px; background: #f7f5fa; }
+      .dock > button { height: 40px; border: 1px solid #79747e; border-radius: 20px; color: #6750a4; background: transparent; cursor: pointer; font-weight: 650; }
+      .dock > button:hover { background: #f0edf4; }
       .dock button:disabled { opacity: .45; cursor: not-allowed; }
       .dock button:disabled:hover { background: transparent; }
       .dock .apply { border-color: #6750a4; color: #fff; background: #6750a4; box-shadow: 0 2px 4px #0002; }
       .dock .apply:hover { background: #5b4596; }
+      .fab-area { position: relative; width: 40px; height: 40px; }
+      .dock .fab { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; color: #fff; background: #6750a4; box-shadow: 0 3px 7px #0003; cursor: pointer; }
+      .dock .fab:hover { background: #5b4596; }
+      .fab svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; transition: transform .22s ease; }
+      .fab[aria-expanded="true"] svg { transform: rotate(180deg); }
+      .fab-menu { position: absolute; right: 2px; bottom: 48px; display: flex; flex-direction: column; gap: 7px; visibility: hidden; pointer-events: none; }
+      .fab-menu button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; color: #21005d; background: #e8def8; box-shadow: 0 2px 5px #0002; cursor: pointer; opacity: 0; transform: translateY(24px) scale(.65); transition: opacity .18s ease, transform .25s cubic-bezier(.2, .8, .2, 1), background-color .18s ease; }
+      .fab-menu.open { visibility: visible; pointer-events: auto; }
+      .fab-menu.open button { opacity: 1; transform: translateY(0) scale(1); }
+      .fab-menu button:disabled { opacity: 0; }
+      .fab-menu.open button:disabled { opacity: .45; }
+      .fab-menu.open button:nth-child(2) { transition-delay: 35ms; }
+      .fab-menu.open button:nth-child(3) { transition-delay: 70ms; }
+      .fab-menu button:hover { background: #d9c8f2; }
+      .fab-menu svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .fab-menu button:focus-visible, .fab:focus-visible { outline: 3px solid #21005d; outline-offset: 3px; }
+      @media (prefers-reduced-motion: reduce) { .fab svg, .fab-menu button { transition: none; } }
       .toast { position: fixed; z-index: 3; right: 18px; bottom: 70px; left: 18px; padding: 10px 13px; border-radius: 8px; color: #f5efff; background: #322f35; text-align: center; opacity: 0; transform: translateY(8px); transition: .18s ease; pointer-events: none; }
       .toast.show { opacity: 1; transform: translateY(0); }
       [hidden] { display: none !important; }
@@ -121,54 +146,147 @@
   <body>
     <div id="app">
       <header class="topbar">
-        <div class="identity"><div class="mark" aria-hidden="true"><!-- APP_ICON --></div><div class="brand">Vasometric</div></div>
+        <div class="identity"><div class="mark"
+            aria-hidden="true"><!-- APP_ICON --></div><div
+            class="brand">Vasometric</div></div>
         <label class="language-control" aria-label="Language">
           <select id="language-select" aria-label="Language">
             <option value="en">English</option>
             <option value="zh-CN">简体中文</option>
           </select>
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5z"/></svg>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path
+              d="m7 10 5 5 5-5z" /></svg>
         </label>
       </header>
       <main>
-        <nav class="modebar" aria-label="Transform mode" data-i18n-aria="aria.transformMode">
-          <button class="mode active" data-mode="isometric" data-i18n="mode.axonometric">Axonometric</button>
-          <button class="mode" data-mode="perspective" data-i18n="mode.perspective">Perspective</button>
+        <nav class="modebar" aria-label="Transform mode"
+          data-i18n-aria="aria.transformMode">
+          <button class="mode active" data-mode="isometric"
+            data-i18n="mode.axonometric">Axonometric</button>
+          <button class="mode" data-mode="perspective"
+            data-i18n="mode.perspective">Perspective</button>
         </nav>
         <section class="stage">
           <div class="stage-head" data-i18n="canvasPreview">Canvas preview</div>
-          <canvas id="preview" aria-label="Selected layer transform preview" data-i18n-aria="aria.preview"></canvas>
-          <div class="empty-preview" id="empty-preview" data-i18n="emptyPreview">Select a layer to see its live preview</div>
+          <canvas id="preview" aria-label="Selected layer transform preview"
+            data-i18n-aria="aria.preview"></canvas>
+          <div class="empty-preview" id="empty-preview"
+            data-i18n="emptyPreview">Select a layer to see its live
+            preview</div>
         </section>
-        <div class="selectionline"><span id="selection-text" data-i18n="chooseLayers">Choose layers on the canvas</span><span class="selectionbadge" id="selection">0 selected</span></div>
+        <div class="selectionline"><span id="selection-text"
+            data-i18n="chooseLayers">Choose layers on the canvas</span><span
+            class="selectionbadge" id="selection">0 selected</span></div>
         <section class="mode-panel" id="isometric-panel">
           <div class="directions" id="directions">
-            <button class="direction" data-direction="left" data-i18n="direction.left">← Left</button><button class="direction" data-direction="top-left" data-i18n="direction.topLeft">↙ Top left</button><button class="direction active" data-direction="right" data-i18n="direction.right">Right →</button><button class="direction" data-direction="top-right" data-i18n="direction.topRight">Top right ↘</button>
+            <button class="direction" data-direction="left"
+              data-i18n="direction.left">← Left</button><button
+              class="direction" data-direction="top-left"
+              data-i18n="direction.topLeft">↙ Top left</button><button
+              class="direction active" data-direction="right"
+              data-i18n="direction.right">Right →</button><button
+              class="direction" data-direction="top-right"
+              data-i18n="direction.topRight">Top right ↘</button>
           </div>
           <div class="control-card">
-            <div class="control angle-control"><label class="label" for="angle-range" data-i18n="angle">Angle</label><input id="angle-range" type="range" min="-180" max="180" step="1" value="0" data-key="angle"><div class="angle-entry"><input id="angle-input" type="number" min="-180" max="180" step="1" value="0" data-key="angle" aria-label="Angle in degrees" data-i18n-aria="aria.angle"><span aria-hidden="true">°</span></div></div>
-            <div class="quickrow"><span data-i18n="snap">Snap</span><button class="quick active" data-angle="0">0°</button><button class="quick" data-angle="30">30°</button><button class="quick" data-angle="45">45°</button></div>
-            <label class="control"><span class="label" data-i18n="extrudeDepth">Extrude depth</span><input type="range" min="0" max="200" value="0" data-key="depth"><output data-output="depth">0 px</output></label>
+            <div class="control angle-control"><label class="label"
+                for="angle-range" data-i18n="angle">Angle</label><input
+                id="angle-range" type="range" min="-180" max="180" step="1"
+                value="0" data-key="angle"><div class="value-field"><button class="value-drag" type="button" aria-label="Drag to adjust angle" data-drag-label="angle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg></button><input
+                  id="angle-input" type="number" min="-180" max="180" step="1"
+                  value="0" data-number-key="angle" aria-label="Angle in degrees"
+                  data-i18n-aria="aria.angle"><span class="value-unit" aria-hidden="true">°</span></div></div>
+            <div class="quickrow"><span data-i18n="snap">Snap</span><button
+                class="quick active" data-angle="0">0°</button><button
+                class="quick" data-angle="30">30°</button><button class="quick"
+                data-angle="45">45°</button></div>
+            <div class="control"><span class="label" data-i18n="extrudeDepth">Extrude depth</span><input type="range"
+                min="0" max="200" value="0" data-key="depth" aria-label="Extrude depth" data-i18n-aria="extrudeDepth"><div class="value-field"><button class="value-drag" type="button" aria-label="Drag to adjust extrude depth" data-drag-label="depth"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg></button><input type="number" min="0" max="200" step="1" value="0" data-number-key="depth" aria-label="Extrude depth" data-i18n-aria="extrudeDepth"><span class="value-unit" aria-hidden="true">px</span></div></div>
             <div id="isometric-extrusion-options"></div>
           </div>
-          <button class="secondary" id="generate-grid" aria-pressed="false" data-i18n="showGrid">Show 3D cube grid</button>
+          <button class="secondary" id="generate-grid" aria-pressed="false"
+            data-i18n="showGrid">Show 3D cube grid</button>
         </section>
         <section class="mode-panel" id="perspective-panel" hidden>
-          <nav class="subtabs" aria-label="Perspective tools" data-i18n-aria="aria.perspectiveTools">
-            <button class="subtab active" data-panel="skew" data-i18n="panel.skew">Skew</button><button class="subtab" data-panel="3d">3D</button><button class="subtab" data-panel="camera" data-i18n="panel.camera">Camera</button><button class="subtab" data-panel="extrusion" data-i18n="panel.extrude">Extrude</button><button class="subtab" data-panel="shadow" data-i18n="panel.shadow">Shadow</button>
+          <nav class="subtabs" aria-label="Perspective tools"
+            data-i18n-aria="aria.perspectiveTools">
+            <button class="subtab active" data-panel="skew"
+              data-i18n="panel.skew">Skew</button><button class="subtab"
+              data-panel="3d">3D</button><button class="subtab"
+              data-panel="camera"
+              data-i18n="panel.camera">Camera</button><button class="subtab"
+              data-panel="extrusion"
+              data-i18n="panel.extrude">Extrude</button><button class="subtab"
+              data-panel="shadow" data-i18n="panel.shadow">Shadow</button>
           </nav>
           <div class="control-card" id="perspective-controls"></div>
         </section>
         <div class="grow"></div>
-        <footer class="dock"><button id="reset" data-i18n="reset">Reset preview</button><button id="restore" data-i18n="restore" disabled>Restore original</button><button class="apply" id="apply" data-i18n="apply">Apply to selection</button></footer>
+        <footer class="dock">
+          <div class="fab-area" id="fab-area">
+            <div class="fab-menu" id="fab-menu" aria-hidden="true">
+              <button id="restore" type="button" aria-label="Restore original"
+                title="Restore original" disabled tabindex="-1"><svg
+                  viewBox="0 0 24 24" aria-hidden="true"><path
+                    d="M4 8V3m0 5h5M4.7 8A8 8 0 1 1 4 13" /><path
+                    d="M12 8v4l3 2" /></svg></button>
+              <button id="undo" type="button" aria-label="Undo" title="Undo"
+                disabled tabindex="-1"><svg viewBox="0 0 24 24"
+                  aria-hidden="true"><path
+                    d="M9 7 4 12l5 5M4 12h10a6 6 0 0 1 0 12"
+                    transform="translate(0 -3)" /></svg></button>
+              <button id="redo" type="button" aria-label="Redo" title="Redo"
+                disabled tabindex="-1"><svg viewBox="0 0 24 24"
+                  aria-hidden="true"><path
+                    d="m15 7 5 5-5 5M20 12H10a6 6 0 0 0 0 12"
+                    transform="translate(0 -3)" /></svg></button>
+            </div>
+            <button class="fab" id="fab-toggle" type="button"
+              aria-label="More actions" title="More actions"
+              aria-controls="fab-menu" aria-expanded="false"><svg
+                viewBox="0 0 24 24" aria-hidden="true"><path
+                  d="m3 15 9-9 9 9" /></svg></button>
+          </div>
+          <button id="reset" data-i18n="reset">Reset preview</button><button
+            class="apply" id="apply" data-i18n="apply">Apply to
+            selection</button>
+        </footer>
       </main>
-      <div class="color-popover" id="color-popover" role="dialog" aria-label="Color picker" data-i18n-aria="pickerLabel" hidden>
-        <div class="picker-header"><strong id="picker-title">Extrusion color</strong><button class="picker-close" id="picker-close" aria-label="Close color picker" data-i18n-aria="pickerClose">×</button></div>
-        <div class="picker-sv" id="picker-sv" role="group" tabindex="0" aria-label="Saturation and brightness" data-i18n-aria="pickerSv"><span class="picker-sv-thumb" id="picker-sv-thumb"></span></div>
-        <div class="picker-strips"><div class="picker-bars"><input id="picker-hue" type="range" min="0" max="360" step="1" value="0" aria-label="Hue" data-i18n-aria="pickerHue"><div class="picker-alpha-track"><div id="picker-alpha-gradient"></div><input id="picker-alpha" type="range" min="0" max="255" step="1" value="255" aria-label="Opacity" data-i18n-aria="pickerAlpha"></div></div><span class="color-swatch" aria-hidden="true"><span class="color-swatch-fill" id="picker-swatch-fill"></span></span></div>
-        <div class="picker-channels"><label><input id="picker-hex" type="text" spellcheck="false" maxlength="9" value="#625D69FF">HEX8</label><label><input id="picker-red" type="number" min="0" max="255" step="1">R</label><label><input id="picker-green" type="number" min="0" max="255" step="1">G</label><label><input id="picker-blue" type="number" min="0" max="255" step="1">B</label><label><input id="picker-alpha-value" type="number" min="0" max="100" step="1">A %</label></div>
-        <label class="picker-rgba-field">RGBA <input id="picker-rgba" type="text" spellcheck="false"></label>
-        <div class="picker-material"><span class="picker-material-title" data-i18n="materialColors">Material colors</span><div class="picker-material-colors" id="picker-material-colors"></div></div>
+      <div class="color-popover" id="color-popover" role="dialog"
+        aria-label="Color picker" data-i18n-aria="pickerLabel" hidden>
+        <div class="picker-header"><strong id="picker-title">Extrusion
+            color</strong><button class="picker-close" id="picker-close"
+            aria-label="Close color picker"
+            data-i18n-aria="pickerClose">×</button></div>
+        <div class="picker-sv" id="picker-sv" role="group" tabindex="0"
+          aria-label="Saturation and brightness" data-i18n-aria="pickerSv"><span
+            class="picker-sv-thumb" id="picker-sv-thumb"></span></div>
+        <div class="picker-strips"><div class="picker-bars"><input
+              id="picker-hue" type="range" min="0" max="360" step="1" value="0"
+              aria-label="Hue" data-i18n-aria="pickerHue"><div
+              class="picker-alpha-track"><div
+                id="picker-alpha-gradient"></div><input id="picker-alpha"
+                type="range" min="0" max="255" step="1" value="255"
+                aria-label="Opacity"
+                data-i18n-aria="pickerAlpha"></div></div><span
+            class="color-swatch" aria-hidden="true"><span
+              class="color-swatch-fill"
+              id="picker-swatch-fill"></span></span></div>
+        <div class="picker-channels"><label><input id="picker-hex" type="text"
+              spellcheck="false" maxlength="9"
+              value="#625D69FF">HEX8</label><label><input id="picker-red"
+              type="number" min="0" max="255" step="1">R</label><label><input
+              id="picker-green" type="number" min="0" max="255"
+              step="1">G</label><label><input id="picker-blue" type="number"
+              min="0" max="255" step="1">B</label><label><input
+              id="picker-alpha-value" type="number" min="0" max="100" step="1">A
+            %</label></div>
+        <label class="picker-rgba-field">RGBA <input id="picker-rgba"
+            type="text" spellcheck="false"></label>
+        <div class="picker-material"><span class="picker-material-title"
+            data-i18n="materialColors">Material colors</span><div
+            class="picker-material-colors"
+            id="picker-material-colors"></div></div>
       </div>
       <div class="toast" id="toast"></div>
     </div>

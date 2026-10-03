@@ -26,11 +26,11 @@ const translations: Record<Language, Record<string, string>> = {
     'aria.transformMode': 'Transform mode', 'aria.preview': 'Selected layer transform preview', 'aria.angle': 'Angle in degrees', 'aria.perspectiveTools': 'Perspective tools',
     'mode.axonometric': 'Axonometric', 'mode.perspective': 'Perspective', canvasPreview: 'Canvas preview', emptyPreview: 'Select a layer to see its live preview', chooseLayers: 'Choose layers on the canvas',
     'direction.left': '← Left', 'direction.topLeft': '↙ Top left', 'direction.right': 'Right →', 'direction.topRight': 'Top right ↘', angle: 'Angle', snap: 'Snap', extrudeDepth: 'Extrude depth',
-    showGrid: 'Show 3D cube grid', hideGrid: 'Hide 3D cube grid', 'panel.skew': 'Skew', 'panel.camera': 'Camera', 'panel.extrude': 'Extrude', 'panel.shadow': 'Shadow', reset: 'Reset preview', restore: 'Restore original', apply: 'Apply to selection',
+    showGrid: 'Show 3D cube grid', hideGrid: 'Hide 3D cube grid', 'panel.skew': 'Skew', 'panel.camera': 'Camera', 'panel.extrude': 'Extrude', 'panel.shadow': 'Shadow', reset: 'Reset preview', restore: 'Restore original', undo: 'Undo', redo: 'Redo', moreActions: 'More actions', apply: 'Apply to selection',
     'control.skewX': 'Skew X', 'control.skewY': 'Skew Y', 'control.rotateX': 'Rotate X', 'control.rotateY': 'Rotate Y', 'control.rotateZ': 'Rotate Z', 'control.perspective': 'Perspective',
     'control.yaw': 'Camera yaw', 'control.pitch': 'Camera pitch', 'control.fov': 'Field of view', 'control.extrusionDepth': 'Depth', 'control.extrusionAngle': 'Direction', 'control.extrusionSteps': 'Segments',
     'control.shadowX': 'Offset X', 'control.shadowY': 'Offset Y', 'control.shadowBlur': 'Softness', 'control.shadowOpacity': 'Opacity',
-    outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color', pickerLabel: 'Color picker', pickerSv: 'Saturation and brightness', pickerHue: 'Hue', pickerAlpha: 'Opacity', pickerClose: 'Close color picker', materialColors: 'Material colors',
+    outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color', pickerLabel: 'Color picker', pickerSv: 'Saturation and brightness', pickerHue: 'Hue', pickerAlpha: 'Opacity', pickerClose: 'Close color picker', materialColors: 'Material colors', dragToAdjust: 'Drag up or down to adjust {name}',
     rotateHelp: 'Rotates around each layer’s center. X tilts vertically, Y turns sideways, and Z spins in the canvas.',
     selected: '{count} selected', selectionReady: 'Showing the selected layers in this preview', chooseLayersToast: 'Select one or more layers on the canvas first', applied: 'Applied to {count} layer(s){extrusions}', addedExtrusions: ' · added {count} solid extrusion(s)', applyFailed: 'Apply failed: {detail}', actionFailed: 'Action failed: {detail}', previewReset: 'Preview reset',
     restored: 'Restored {count} layer(s)', noSavedTransform: 'No saved transform for the selected layers', encodeFailed: 'Could not prepare extrusion', done: 'Done',
@@ -39,11 +39,11 @@ const translations: Record<Language, Record<string, string>> = {
     'aria.transformMode': '变换模式', 'aria.preview': '所选图层变换预览', 'aria.angle': '角度（度）', 'aria.perspectiveTools': '透视工具',
     'mode.axonometric': '等轴测', 'mode.perspective': '透视', canvasPreview: '画布预览', emptyPreview: '选择图层以查看实时预览', chooseLayers: '请在画布上选择图层',
     'direction.left': '← 左侧', 'direction.topLeft': '↙ 左上', 'direction.right': '右侧 →', 'direction.topRight': '右上 ↘', angle: '角度', snap: '快捷角度', extrudeDepth: '挤出深度',
-    showGrid: '显示 3D 立方体网格', hideGrid: '隐藏 3D 立方体网格', 'panel.skew': '倾斜', 'panel.camera': '相机', 'panel.extrude': '挤出', 'panel.shadow': '阴影', reset: '重置预览', restore: '恢复原状', apply: '应用到所选图层',
+    showGrid: '显示 3D 立方体网格', hideGrid: '隐藏 3D 立方体网格', 'panel.skew': '倾斜', 'panel.camera': '相机', 'panel.extrude': '挤出', 'panel.shadow': '阴影', reset: '重置预览', restore: '恢复原状', undo: '撤回', redo: '重做', moreActions: '更多操作', apply: '应用到所选图层',
     'control.skewX': 'X 轴倾斜', 'control.skewY': 'Y 轴倾斜', 'control.rotateX': '绕 X 轴旋转', 'control.rotateY': '绕 Y 轴旋转', 'control.rotateZ': '绕 Z 轴旋转', 'control.perspective': '透视强度',
     'control.yaw': '相机偏航角', 'control.pitch': '相机俯仰角', 'control.fov': '视野角度', 'control.extrusionDepth': '深度', 'control.extrusionAngle': '方向', 'control.extrusionSteps': '分段数',
     'control.shadowX': 'X 轴偏移', 'control.shadowY': 'Y 轴偏移', 'control.shadowBlur': '柔化程度', 'control.shadowOpacity': '不透明度',
-    outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色', pickerLabel: '颜色选择器', pickerSv: '饱和度和明度', pickerHue: '色相', pickerAlpha: '不透明度', pickerClose: '关闭颜色选择器', materialColors: 'Material 配色',
+    outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色', pickerLabel: '颜色选择器', pickerSv: '饱和度和明度', pickerHue: '色相', pickerAlpha: '不透明度', pickerClose: '关闭颜色选择器', materialColors: 'Material 配色', dragToAdjust: '上下拖动以调整{name}',
     rotateHelp: '围绕每个图层的中心旋转。X 轴控制垂直倾斜，Y 轴控制侧向旋转，Z 轴控制画布平面内旋转。',
     selected: '已选择 {count} 个图层', selectionReady: '正在预览所选图层', chooseLayersToast: '请先在画布上选择一个或多个图层', applied: '已应用到 {count} 个图层{extrusions}', addedExtrusions: ' · 已添加 {count} 个实体挤出效果', applyFailed: '应用失败：{detail}', actionFailed: '操作失败：{detail}', previewReset: '已重置预览',
     restored: '已恢复 {count} 个图层', noSavedTransform: '所选图层没有可恢复的变换', encodeFailed: '无法生成挤出效果', done: '完成',
@@ -134,6 +134,18 @@ function applyTranslations(): void {
   $('selection').textContent = t('selected', { count: selectionCount });
   $('selection-text').textContent = t(selectionCount ? 'selectionReady' : 'chooseLayers');
   $('generate-grid').textContent = t(showIsometricGrid ? 'hideGrid' : 'showGrid');
+  for (const id of ['restore', 'undo', 'redo', 'fab-toggle']) {
+    const button = $<HTMLButtonElement>(id);
+    const label = t(id === 'fab-toggle' ? 'moreActions' : id);
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  }
+  document.querySelectorAll<HTMLButtonElement>('.value-drag').forEach((button) => {
+    const key = button.dataset.dragLabel || '';
+    const name = key === 'angle' ? t('angle') : key === 'depth' ? t('extrudeDepth') : key.startsWith('control.') ? t(key) : key;
+    button.setAttribute('aria-label', t('dragToAdjust', { name }));
+    button.title = t('dragToAdjust', { name });
+  });
   drawIsometricExtrusionOptions();
   if (settings.mode === 'perspective') drawPerspectiveControls();
   renderMaterialColors();
@@ -241,12 +253,6 @@ const isIsometric = (): boolean => settings.mode === 'isometric';
 function showToast(message: string): void {
   const toast = $('toast'); toast.textContent = message; toast.classList.add('show');
   window.setTimeout(() => toast.classList.remove('show'), 2000);
-}
-
-function formatValue(key: keyof Settings, value: number): string {
-  const control = Object.values(controls).flat().find((entry) => entry.key === key);
-  const suffix = control?.suffix || (key === 'angle' ? '°' : key === 'depth' ? ' px' : '');
-  return `${Math.round(value)}${suffix}`;
 }
 
 function isometricMatrix(direction: Direction, angle: number): [number, number, number, number] {
@@ -953,35 +959,93 @@ function applyPickerHsv(): void {
   setActiveColor(rgbToHex8(red, green, blue, alpha), true);
 }
 
+const valueDragSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>';
+
+function numberFieldMarkup(key: keyof Settings, value: number, min: number, max: number, step: number, suffix: string, label: string): string {
+  return `<div class="value-field"><button class="value-drag" type="button" data-drag-label="control.${key}" aria-label="${t('dragToAdjust', { name: label })}" title="${t('dragToAdjust', { name: label })}">${valueDragSvg}</button><input type="number" min="${min}" max="${max}" step="${step}" value="${value}" data-number-key="${key}" aria-label="${label}">${suffix ? `<span class="value-unit" aria-hidden="true">${suffix}</span>` : ''}</div>`;
+}
+
 function drawPerspectiveControls(): void {
   const container = $('perspective-controls');
   document.querySelectorAll<HTMLButtonElement>('.subtab').forEach((button) => button.classList.toggle('active', button.dataset.panel === settings.panel));
-  container.innerHTML = controls[settings.panel].map((control) => `<label class="control"><span class="label">${t(`control.${control.key}`)}</span><input type="range" min="${control.min}" max="${control.max}" step="${control.step || 1}" value="${settings[control.key]}" data-key="${control.key}"><output data-output="${control.key}">${formatValue(control.key, Number(settings[control.key]))}</output></label>`).join('')
+  container.innerHTML = controls[settings.panel].map((control) => {
+    const label = t(`control.${control.key}`);
+    return `<div class="control"><span class="label">${label}</span><input type="range" min="${control.min}" max="${control.max}" step="${control.step || 1}" value="${settings[control.key]}" data-key="${control.key}" aria-label="${label}">${numberFieldMarkup(control.key, Number(settings[control.key]), control.min, control.max, control.step || 1, (control.suffix || '').trim(), label)}</div>`;
+  }).join('')
     + (settings.panel === '3d' ? `<p class="helper">${t('rotateHelp')}</p>` : '')
     + (settings.panel === 'extrusion' ? extrusionOptionsMarkup() : '');
   bindRangeInputs(container);
+  bindNumberFields(container);
+  bindValueDragHandles(container);
   bindExtrusionOptions(container);
   syncExtrusionInputs();
 }
 
-function setAngle(value: number, syncInput = true): void {
-  settings.angle = Math.max(-180, Math.min(180, Math.round(value)));
-  ($<HTMLInputElement>('angle-range')).value = String(settings.angle);
-  if (syncInput) ($<HTMLInputElement>('angle-input')).value = String(settings.angle);
-  document.querySelectorAll<HTMLButtonElement>('.quick').forEach((button) => button.classList.toggle('active', Number(button.dataset.angle) === settings.angle));
+function setNumericValue(key: keyof Settings, value: number, syncNumberInput = true): void {
+  const input = document.querySelector<HTMLInputElement>(`input[data-number-key="${key}"]`);
+  const min = input ? Number(input.min) : -Infinity, max = input ? Number(input.max) : Infinity;
+  const next = Math.max(min, Math.min(max, Math.round(value)));
+  (settings as unknown as Record<string, number>)[key] = next;
+  document.querySelectorAll<HTMLInputElement>(`input[type="range"][data-key="${key}"]`).forEach((range) => { range.value = String(next); });
+  if (syncNumberInput) document.querySelectorAll<HTMLInputElement>(`input[data-number-key="${key}"]`).forEach((field) => { field.value = String(next); });
+  if (key === 'angle') document.querySelectorAll<HTMLButtonElement>('.quick').forEach((button) => button.classList.toggle('active', Number(button.dataset.angle) === next));
   emitPreview();
 }
+
+function setAngle(value: number, syncInput = true): void { setNumericValue('angle', value, syncInput); }
 
 function bindRangeInputs(root: ParentNode = document): void {
   root.querySelectorAll<HTMLInputElement>('input[type="range"][data-key]').forEach((input) => {
     input.oninput = () => {
       const key = input.dataset.key as keyof Settings;
-      const next = Number(input.value);
-      if (key === 'angle') { setAngle(next); return; }
-      (settings as unknown as Record<string, number | string>)[key] = next;
-      const output = root.querySelector<HTMLOutputElement>(`output[data-output="${key}"]`) || document.querySelector<HTMLOutputElement>(`output[data-output="${key}"]`);
-      if (output) output.textContent = formatValue(key, next);
-      emitPreview();
+      setNumericValue(key, Number(input.value));
+    };
+  });
+}
+
+function bindNumberFields(root: ParentNode = document): void {
+  root.querySelectorAll<HTMLInputElement>('input[data-number-key]').forEach((input) => {
+    input.oninput = () => {
+      const value = input.valueAsNumber;
+      if (Number.isFinite(value) && value >= Number(input.min) && value <= Number(input.max)) setNumericValue(input.dataset.numberKey as keyof Settings, value, false);
+    };
+    input.onchange = () => {
+      const value = input.valueAsNumber;
+      setNumericValue(input.dataset.numberKey as keyof Settings, Number.isFinite(value) ? value : Number(settings[input.dataset.numberKey as keyof Settings]));
+    };
+    input.onkeydown = (event) => { if (event.key === 'Enter') input.blur(); };
+  });
+}
+
+function bindValueDragHandles(root: ParentNode = document): void {
+  root.querySelectorAll<HTMLButtonElement>('.value-drag').forEach((handle) => {
+    const input = handle.parentElement?.querySelector<HTMLInputElement>('input[type="number"]');
+    if (!input) return;
+    let startY = 0, startValue = 0;
+    const changeBy = (delta: number): void => {
+      const min = Number(input.min), max = Number(input.max);
+      const rangeStep = Math.max(Number(input.step) || 1, Math.round((max - min) / 200));
+      const next = Math.max(min, Math.min(max, Math.round(startValue + delta * rangeStep)));
+      if (input.dataset.numberKey) setNumericValue(input.dataset.numberKey as keyof Settings, next);
+      else { input.value = String(next); input.dispatchEvent(new Event('change', { bubbles: true })); }
+    };
+    handle.onpointerdown = (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      startY = event.clientY;
+      startValue = Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : Number(input.min);
+      handle.setPointerCapture(event.pointerId);
+    };
+    handle.onpointermove = (event) => {
+      if (!handle.hasPointerCapture(event.pointerId)) return;
+      changeBy(Math.trunc((startY - event.clientY) / 4) * (event.shiftKey ? 10 : 1));
+    };
+    handle.onpointerup = (event) => { if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId); };
+    handle.onkeydown = (event) => {
+      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+      event.preventDefault();
+      startValue = Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : Number(input.min);
+      changeBy((event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 10 : 1));
     };
   });
 }
@@ -1008,16 +1072,6 @@ document.querySelectorAll<HTMLButtonElement>('.quick').forEach((button) => butto
   setAngle(Number(button.dataset.angle));
 }));
 
-const angleInput = $<HTMLInputElement>('angle-input');
-angleInput.addEventListener('input', () => {
-  const value = angleInput.valueAsNumber;
-  if (Number.isInteger(value) && value >= -180 && value <= 180) setAngle(value, false);
-});
-angleInput.addEventListener('change', () => {
-  const value = angleInput.valueAsNumber;
-  setAngle(Number.isFinite(value) ? value : settings.angle);
-});
-
 function resetAll(): void {
   closeColorPicker();
   cancelAnimationFrame(previewAnimation);
@@ -1033,15 +1087,10 @@ function resetAll(): void {
   document.querySelectorAll('.direction').forEach((button) => button.classList.toggle('active', (button as HTMLElement).dataset.direction === 'right'));
   document.querySelectorAll('.quick').forEach((button) => button.classList.toggle('active', (button as HTMLElement).dataset.angle === '0'));
   $('isometric-panel').hidden = false; $('perspective-panel').hidden = true;
-  document.querySelectorAll<HTMLInputElement>('input[data-key]').forEach((input) => {
-    const key = input.dataset.key as keyof Settings;
+  document.querySelectorAll<HTMLInputElement>('input[data-key], input[data-number-key]').forEach((input) => {
+    const key = (input.dataset.key || input.dataset.numberKey) as keyof Settings;
     const next = defaults[key];
     if (typeof next === 'number') input.value = String(next);
-  });
-  document.querySelectorAll<HTMLOutputElement>('output[data-output]').forEach((output) => {
-    const key = output.dataset.output as keyof Settings;
-    const next = defaults[key];
-    if (typeof next === 'number') output.textContent = formatValue(key, next);
   });
   drawIsometricExtrusionOptions();
   drawPerspectiveControls();
@@ -1055,7 +1104,21 @@ function resetAll(): void {
 }
 
 $('reset').addEventListener('click', resetAll);
-$('restore').addEventListener('click', () => post({ type: 'restore' }));
+let fabOpen = false;
+function setFabOpen(open: boolean): void {
+  fabOpen = open;
+  const menu = $('fab-menu');
+  menu.classList.toggle('open', open);
+  menu.setAttribute('aria-hidden', String(!open));
+  $<HTMLButtonElement>('fab-toggle').setAttribute('aria-expanded', String(open));
+  menu.querySelectorAll<HTMLButtonElement>('button').forEach((button) => { button.tabIndex = open ? 0 : -1; });
+}
+$('fab-toggle').addEventListener('click', () => setFabOpen(!fabOpen));
+document.addEventListener('click', (event) => { if (fabOpen && event.target instanceof Node && !$('fab-area').contains(event.target)) setFabOpen(false); });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && fabOpen) { setFabOpen(false); $<HTMLButtonElement>('fab-toggle').focus(); } });
+$('restore').addEventListener('click', () => { setFabOpen(false); post({ type: 'restore' }); });
+$('undo').addEventListener('click', () => { setFabOpen(false); post({ type: 'undo' }); });
+$('redo').addEventListener('click', () => { setFabOpen(false); post({ type: 'redo' }); });
 $('apply').addEventListener('click', () => {
   const button = $('apply') as HTMLButtonElement;
   button.disabled = true;
@@ -1122,6 +1185,27 @@ saturationPicker.addEventListener('keydown', (event) => {
   event.preventDefault();
   applyPickerHsv();
 });
+function decoratePickerField(id: string, dragLabel?: string): void {
+  const input = $<HTMLInputElement>(id);
+  const field = document.createElement('span');
+  field.className = `value-field${dragLabel ? '' : ' hex-field'}`;
+  input.parentElement?.insertBefore(field, input);
+  if (dragLabel) {
+    const handle = document.createElement('button');
+    handle.type = 'button';
+    handle.className = 'value-drag';
+    handle.dataset.dragLabel = dragLabel;
+    handle.innerHTML = valueDragSvg;
+    field.appendChild(handle);
+  }
+  field.appendChild(input);
+}
+decoratePickerField('picker-hex');
+decoratePickerField('picker-red', 'R');
+decoratePickerField('picker-green', 'G');
+decoratePickerField('picker-blue', 'B');
+decoratePickerField('picker-alpha-value', 'A %');
+decoratePickerField('picker-rgba');
 (['red', 'green', 'blue', 'alpha-value'] as const).forEach((channel) => {
   const input = $<HTMLInputElement>(`picker-${channel}`);
   input.addEventListener('change', () => {
@@ -1156,7 +1240,7 @@ document.addEventListener('keydown', (event) => {
 $('app').querySelector('main')?.addEventListener('scroll', closeColorPicker);
 window.addEventListener('resize', closeColorPicker);
 ($<HTMLSelectElement>('language-select')).addEventListener('change', (event) => setLanguage((event.currentTarget as HTMLSelectElement).value as Language));
-window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; restorable?: number; text?: string } & PreviewMessage }>) => {
+window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; restorable?: number; undo?: number; redo?: number; text?: string } & PreviewMessage }>) => {
   const message = event.data.pluginMessage;
   if (!message) return;
   if (message.type === 'layer-preview') void loadLayerPreview(message);
@@ -1167,10 +1251,16 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?
     $('selection').classList.toggle('ready', selectionCount > 0);
     $('selection-text').textContent = t(selectionCount ? 'selectionReady' : 'chooseLayers');
   }
+  if (message.type === 'history') {
+    $<HTMLButtonElement>('undo').disabled = !message.undo;
+    $<HTMLButtonElement>('redo').disabled = !message.redo;
+  }
   if (message.type === 'notice') showToast(localizeNotice(message.text || String(message.count || t('done'))));
 };
 
 applyTranslations();
 bindRangeInputs();
+bindNumberFields();
+bindValueDragHandles();
 drawPerspectiveControls();
 drawLayerPreview();
