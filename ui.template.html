@@ -47,8 +47,7 @@
       .subtab.active { color: #6750a4; font-weight: 650; }
       .subtab.active::after { position: absolute; right: 8px; bottom: -1px; left: 8px; height: 2px; content: ""; background: #6750a4; }
       .control-card { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 9px; border-radius: 14px; background: #f0edf4; }
-      .control { display: grid; grid-template-columns: 84px minmax(0, 1fr) 92px; align-items: center; gap: 9px; min-height: 34px; }
-      .angle-control { grid-template-columns: 84px minmax(0, 1fr) 92px; }
+      .control { display: grid; grid-template-columns: minmax(0, 1fr) 92px; align-items: center; gap: 9px; min-height: 34px; }
       .label { color: #49454f; }
       .value-field { display: flex; align-items: center; min-width: 0; height: 30px; padding: 0 5px 0 2px; border: 1px solid transparent; border-radius: 6px; color: #1d1b20; background: #e9e5ed; }
       .value-field:hover { background: #e2dee6; }
@@ -65,10 +64,14 @@
       .option-toggle { display: flex; align-items: center; gap: 8px; min-height: 30px; color: #49454f; cursor: pointer; }
       .option-toggle input { width: 16px; height: 16px; margin: 0; accent-color: #6750a4; cursor: pointer; }
       .color-control { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; color: #49454f; }
-      .color-trigger { display: inline-flex; align-items: center; gap: 7px; min-width: 132px; height: 32px; padding: 3px 7px; border: 1px solid #79747e; border-radius: 8px; background: #fff; cursor: pointer; }
-      .color-trigger:hover { border-color: #6750a4; background: #f0edf4; }
-      .color-trigger[aria-expanded="true"] { border: 2px solid #6750a4; }
-      .color-value { font-size: 10px; font-variant-numeric: tabular-nums; }
+      .color-trigger { display: inline-flex; align-items: center; gap: 6px; flex: none; width: 156px; height: 24px; padding: 0 0 0 5px; border: 0; border-radius: 5px; color: #1d1b20; background: #e9e5ed; cursor: pointer; transition: none; }
+      .color-trigger:active { transform: none; }
+      .color-trigger.clicked { animation: none; }
+      .color-trigger:focus { outline: none; }
+      .color-value { flex: 1; text-align: left; font-size: 11px; font-variant-numeric: tabular-nums; }
+      .color-opacity { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: none; width: 51px; height: 100%; border-left: 1px solid #c9c5cd; font-size: 11px; font-variant-numeric: tabular-nums; }
+      .color-opacity-unit { color: #625d69; font-size: 10px; }
+      .color-trigger .color-swatch { width: 14px; height: 14px; border: 0; border-radius: 2px; }
       .color-swatch { position: relative; display: inline-block; flex: none; width: 25px; height: 24px; overflow: hidden; border: 1px solid #79747e; border-radius: 5px; background: conic-gradient(#d8d5dc 25%, #fff 0 50%, #d8d5dc 0 75%, #fff 0) 0 0 / 8px 8px; }
       .color-swatch-fill { position: absolute; inset: 0; }
       .color-popover { position: fixed; z-index: 10; width: 326px; padding: 12px; border: 1px solid #cac4d0; border-radius: 16px; background: #f7f5fa; box-shadow: 0 6px 20px #0003; }
@@ -140,6 +143,15 @@
       @media (prefers-reduced-motion: reduce) { .fab svg, .fab-menu button { transition: none; } }
       .toast { position: fixed; z-index: 3; right: 18px; bottom: 70px; left: 18px; padding: 10px 13px; border-radius: 8px; color: #f5efff; background: #322f35; text-align: center; opacity: 0; transform: translateY(8px); transition: .18s ease; pointer-events: none; }
       .toast.show { opacity: 1; transform: translateY(0); }
+      .restore-dialog { width: min(340px, calc(100vw - 32px)); padding: 22px; border: 0; border-radius: 16px; color: #1d1b20; background: #f7f5fa; box-shadow: 0 8px 32px #0004; }
+      .restore-dialog::backdrop { background: #0006; }
+      .restore-dialog h2 { margin: 0 0 12px; font-size: 16px; }
+      .restore-dialog p { margin: 0 0 16px; color: #625d69; line-height: 1.6; }
+      .restore-dialog .option-toggle { align-items: flex-start; line-height: 1.5; }
+      .restore-dialog .option-toggle input { margin-top: 1px; flex: none; }
+      .restore-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+      .restore-dialog-actions button { min-height: 34px; padding: 0 16px; border: 0; border-radius: 18px; color: #6750a4; background: #e9e5ed; cursor: pointer; }
+      .restore-dialog-actions .confirm-restore { color: #fff; background: #6750a4; }
       [hidden] { display: none !important; }
     </style>
   </head>
@@ -190,9 +202,7 @@
           </div>
           <div class="control-card">
             <div class="control angle-control"><label class="label"
-                for="angle-range" data-i18n="angle">Angle</label><input
-                id="angle-range" type="range" min="-180" max="180" step="1"
-                value="0" data-key="angle"><div class="value-field"><button class="value-drag" type="button" aria-label="Drag to adjust angle" data-drag-label="angle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg></button><input
+                for="angle-input" data-i18n="angle">Angle</label><div class="value-field"><button class="value-drag" type="button" aria-label="Drag to adjust angle" data-drag-label="angle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg></button><input
                   id="angle-input" type="number" min="-180" max="180" step="1"
                   value="0" data-number-key="angle" aria-label="Angle in degrees"
                   data-i18n-aria="aria.angle"><span class="value-unit" aria-hidden="true">°</span></div></div>
@@ -200,8 +210,7 @@
                 class="quick active" data-angle="0">0°</button><button
                 class="quick" data-angle="30">30°</button><button class="quick"
                 data-angle="45">45°</button></div>
-            <div class="control"><span class="label" data-i18n="extrudeDepth">Extrude depth</span><input type="range"
-                min="0" max="200" value="0" data-key="depth" aria-label="Extrude depth" data-i18n-aria="extrudeDepth"><div class="value-field"><button class="value-drag" type="button" aria-label="Drag to adjust extrude depth" data-drag-label="depth"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg></button><input type="number" min="0" max="200" step="1" value="0" data-number-key="depth" aria-label="Extrude depth" data-i18n-aria="extrudeDepth"><span class="value-unit" aria-hidden="true">px</span></div></div>
+            <div class="control"><span class="label" data-i18n="extrudeDepth">Extrude depth</span><div class="value-field"><button class="value-drag" type="button" aria-label="Drag to adjust extrude depth" data-drag-label="depth"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg></button><input type="number" min="0" max="200" step="1" value="0" data-number-key="depth" aria-label="Extrude depth" data-i18n-aria="extrudeDepth"><span class="value-unit" aria-hidden="true">px</span></div></div>
             <div id="isometric-extrusion-options"></div>
           </div>
           <button class="secondary" id="generate-grid" aria-pressed="false"
@@ -288,6 +297,12 @@
             class="picker-material-colors"
             id="picker-material-colors"></div></div>
       </div>
+      <dialog class="restore-dialog" id="restore-dialog" aria-labelledby="restore-dialog-title" aria-describedby="restore-dialog-warning">
+        <h2 id="restore-dialog-title" data-i18n="restoreConfirmTitle">Restore original?</h2>
+        <p id="restore-dialog-warning" data-i18n="restoreWarning">Selected layers will return to their original state and generated extrusion content will be removed. Deleting edit history permanently clears this plugin’s undo and redo records, so this restore cannot be undone.</p>
+        <label class="option-toggle"><input type="checkbox" id="restore-clear-history" checked><span data-i18n="restoreClearHistory">Delete edit history</span></label>
+        <div class="restore-dialog-actions"><button type="button" id="restore-cancel" data-i18n="cancel" autofocus>Cancel</button><button type="button" class="confirm-restore" id="restore-confirm" data-i18n="confirmRestore">Restore</button></div>
+      </dialog>
       <div class="toast" id="toast"></div>
     </div>
     <!-- BUN_UI_BUNDLE -->

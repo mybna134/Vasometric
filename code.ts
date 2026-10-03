@@ -26,13 +26,13 @@ type PluginSettings = {
   shadowOpacity: number;
 };
 
-type PluginMessage = { type: string; settings?: PluginSettings };
+type PluginMessage = { type: string; settings?: PluginSettings; previewRevision?: number; extrusions?: ExtrusionVector[]; clearHistory?: boolean };
 type Matrix2D = { a: number; b: number; c: number; d: number };
 type LayerPreview = { id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number; scale: number };
 type PreviewBounds = { x: number; y: number; width: number; height: number };
 type TracedPath = { path: string; x: number; y: number };
-type ExtrusionVector = { id: string; body: TracedPath | null; outline: TracedPath | null; dx: number; dy: number };
-type OriginalState = { version: 1; width: number; height: number; transform: Transform; effects?: Effect[]; extrusionIds: string[] };
+type ExtrusionVector = { id: string; body: TracedPath | null; outline: TracedPath | null; dx: number; dy: number; sourceBounds?: PreviewBounds };
+type OriginalState = { version: 1; width: number; height: number; transform: Transform; visible?: boolean; effects?: Effect[]; extrusionIds: string[] };
 type HistoryAction =
   | { type: 'apply'; beforeIds: string[]; afterIds: string[]; settings: PluginSettings; extrusions: ExtrusionVector[] }
   | { type: 'restore'; beforeIds: string[]; afterIds: string[] };
@@ -40,6 +40,20 @@ type HistoryAction =
 const ORIGINAL_KEY = 'vasometric-original-v1';
 const EXTRUSION_SOURCE_KEY = 'vasometric-extrusion-source';
 const GROUP_SOURCE_KEY = 'vasometric-group-source';
+
+function multiplyTransforms(left: Transform, right: Transform): Transform {
+  return [
+    [left[0][0] * right[0][0] + left[0][1] * right[1][0], left[0][0] * right[0][1] + left[0][1] * right[1][1], left[0][0] * right[0][2] + left[0][1] * right[1][2] + left[0][2]],
+    [left[1][0] * right[0][0] + left[1][1] * right[1][0], left[1][0] * right[0][1] + left[1][1] * right[1][1], left[1][0] * right[0][2] + left[1][1] * right[1][2] + left[1][2]],
+  ];
+}
+
+function inverseTransform(matrix: Transform): Transform {
+  const [[a, c, x], [b, d, y]] = matrix;
+  const determinant = a * d - b * c;
+  if (Math.abs(determinant) < 1e-10) throw new Error('Cannot transform a layer in a singular coordinate system');
+  return [[d / determinant, -c / determinant, (c * y - d * x) / determinant], [-b / determinant, a / determinant, (b * x - a * y) / determinant]];
+}
 
 if (figma.editorType !== 'figma') {
   figma.closePlugin('Vasometric is available in Figma Design.');
@@ -50,6 +64,8 @@ if (figma.editorType !== 'figma') {
   const selectedNodes = (): SceneNode[] => [...figma.currentPage.selection];
   const notice = (text: string): void => figma.ui.postMessage({ type: 'notice', text });
   let previewRevision = 0;
+  let pendingActions = 0;
+  let actionQueue: Promise<void> = Promise.resolve();
   const undoHistory: HistoryAction[] = [];
   const redoHistory: HistoryAction[] = [];
   const redoneIds = new Map<string, string>();
@@ -66,7 +82,15 @@ if (figma.editorType !== 'figma') {
   }
 
   async function selectHistoryNodes(ids: readonly string[]): Promise<boolean> {
-    const nodes = await Promise.all(ids.map((id) => figma.getNodeByIdAsync(redoneIds.get(id) || id)));
+    const nodes = await Promise.all(ids.map(async (id) => {
+      let mapped = id;
+      const visited = new Set<string>();
+      while (redoneIds.has(mapped) && !visited.has(mapped)) {
+        visited.add(mapped);
+        mapped = redoneIds.get(mapped)!;
+      }
+      return await figma.getNodeByIdAsync(mapped) || (mapped !== id ? await figma.getNodeByIdAsync(id) : null);
+    }));
     const selected = nodes.filter((node): node is SceneNode => node !== null && 'visible' in node);
     if (selected.length !== ids.length) return false;
     figma.currentPage.selection = selected;
@@ -84,7 +108,7 @@ if (figma.editorType !== 'figma') {
   }
 
   function saveOriginal(node: SceneNode, effects = false): OriginalState {
-    const original = readOriginal(node) || { version: 1, width: node.width, height: node.height, transform: node.relativeTransform, extrusionIds: [] };
+    const original = readOriginal(node) || { version: 1, width: node.width, height: node.height, transform: node.relativeTransform, visible: node.visible, extrusionIds: [] };
     if (effects && original.effects === undefined && 'effects' in node) original.effects = [...node.effects];
     node.setPluginData(ORIGINAL_KEY, JSON.stringify(original));
     return original;
@@ -106,11 +130,12 @@ if (figma.editorType !== 'figma') {
   }
 
   async function sendSelection(): Promise<void> {
+    if (pendingActions > 0) { previewRevision += 1; return; }
     const nodes = selectedNodes();
-    figma.ui.postMessage({ type: 'selection', count: nodes.length, restorable: nodes.filter((node) => readOriginal(originalSource(node)) !== null).length });
     const revision = ++previewRevision;
+    figma.ui.postMessage({ type: 'selection', revision, count: nodes.length, restorable: nodes.filter((node) => readOriginal(originalSource(node)) !== null).length });
     if (nodes.length === 0) {
-      figma.ui.postMessage({ type: 'layer-preview', nodes: [], bounds: null });
+      figma.ui.postMessage({ type: 'layer-preview', revision, nodes: [], bounds: null });
       return;
     }
     const previews = await Promise.all(nodes.map(async (node): Promise<LayerPreview | null> => {
@@ -129,7 +154,7 @@ if (figma.editorType !== 'figma') {
     if (revision !== previewRevision) return;
     const layers = previews.filter((item): item is LayerPreview => item !== null);
     if (!layers.length) {
-      figma.ui.postMessage({ type: 'layer-preview', nodes: [], bounds: null });
+      figma.ui.postMessage({ type: 'layer-preview', revision, nodes: [], bounds: null });
       return;
     }
     const left = Math.min(...layers.map((layer) => layer.x));
@@ -137,7 +162,7 @@ if (figma.editorType !== 'figma') {
     const right = Math.max(...layers.map((layer) => layer.x + layer.width));
     const bottom = Math.max(...layers.map((layer) => layer.y + layer.height));
     const bounds: PreviewBounds = { x: left, y: top, width: right - left, height: bottom - top };
-    figma.ui.postMessage({ type: 'layer-preview', nodes: layers, bounds });
+    figma.ui.postMessage({ type: 'layer-preview', revision, nodes: layers, bounds });
   }
 
   function transformation(settings: PluginSettings): Matrix2D {
@@ -184,25 +209,46 @@ if (figma.editorType !== 'figma') {
     return multiply(multiply(skew, rotation3d), camera);
   }
 
-  function transformNode(node: SceneNode, operation: Matrix2D): void {
-    const [first, second] = node.relativeTransform;
-    const centerX = node.width / 2, centerY = node.height / 2;
-    const centerParentX = first[0] * centerX + first[1] * centerY + first[2];
-    const centerParentY = second[0] * centerX + second[1] * centerY + second[2];
-    const rawA = operation.a * first[0] + operation.c * second[0];
-    const rawC = operation.a * first[1] + operation.c * second[1];
-    const rawB = operation.b * first[0] + operation.d * second[0];
-    const rawD = operation.b * first[1] + operation.d * second[1];
-    const scaleX = Math.max(0.01, Math.hypot(rawA, rawB));
-    const scaleY = Math.max(0.01, Math.hypot(rawC, rawD));
+  function transformNode(node: SceneNode, operation: Matrix2D): SceneNode {
+    // PNG extrusion paths are in page coordinates and pivot around the render bounds.
+    const bounds = ('absoluteRenderBounds' in node ? node.absoluteRenderBounds : null) || node.absoluteBoundingBox;
+    if (!bounds) return node;
+    const centerX = bounds.x + bounds.width / 2, centerY = bounds.y + bounds.height / 2;
+    const world: Transform = [[operation.a, operation.c, centerX - operation.a * centerX - operation.c * centerY], [operation.b, operation.d, centerY - operation.b * centerX - operation.d * centerY]];
+    const containsText = (target: SceneNode): boolean => target.type === 'TEXT' || ('children' in target && target.children.some(containsText));
+    let original: SceneNode | null = null;
+    if (containsText(node)) {
+      // Resizing live text changes its layout rather than scaling its glyphs.
+      original = node;
+      const copy = node.clone();
+      copy.relativeTransform = node.absoluteTransform;
+      try { node = figma.flatten([copy], figma.currentPage); }
+      catch (error) { if (!copy.removed) copy.remove(); throw error; }
+      clearGeneratedData(node);
+      node.name = `${original.name} · transformed face`;
+    }
+    const container = multiplyTransforms(node.absoluteTransform, inverseTransform(node.relativeTransform));
+    const target = multiplyTransforms(inverseTransform(container), multiplyTransforms(world, node.absoluteTransform));
+    const [[rawA, rawC, x], [rawB, rawD, y]] = target;
+    const scaleX = Math.max(0.0001, Math.hypot(rawA, rawB));
+    const scaleY = Math.max(0.0001, Math.hypot(rawC, rawD));
     const resizable = node as SceneNode & { resize?: (width: number, height: number) => void };
-    if (typeof resizable.resize === 'function') resizable.resize(Math.max(1, node.width * scaleX), Math.max(1, node.height * scaleY));
-    const nextCenterX = node.width / 2, nextCenterY = node.height / 2;
+    if (typeof resizable.resize === 'function' && (Math.abs(scaleX - 1) > 1e-8 || Math.abs(scaleY - 1) > 1e-8)) resizable.resize(Math.max(0.01, node.width * scaleX), node.type === 'LINE' ? 0 : Math.max(0.01, node.height * scaleY));
     const a = rawA / scaleX, b = rawB / scaleX, c = rawC / scaleY, d = rawD / scaleY;
-    node.relativeTransform = [
-      [a, c, centerParentX - a * nextCenterX - c * nextCenterY],
-      [b, d, centerParentY - b * nextCenterX - d * nextCenterY],
-    ];
+    node.relativeTransform = [[a, c, x], [b, d, y]];
+    if (!original) return node;
+    const parent = original.parent;
+    if (!parent || !('children' in parent)) { node.remove(); throw new Error('Cannot group this text layer'); }
+    const source = originalSource(original);
+    const saved = saveOriginal(source);
+    saved.extrusionIds.push(node.id);
+    source.setPluginData(ORIGINAL_KEY, JSON.stringify(saved));
+    node.setPluginData(EXTRUSION_SOURCE_KEY, source.id);
+    const group = figma.group([original, node], parent, parent.children.indexOf(original));
+    group.name = original.name;
+    group.setPluginData(GROUP_SOURCE_KEY, source.id);
+    original.visible = false;
+    return group;
   }
 
   function applyShadow(nodes: readonly SceneNode[], settings: PluginSettings): void {
@@ -312,8 +358,10 @@ if (figma.editorType !== 'figma') {
       applyShadow(nodes, settings);
     }
     const matrix = transformation(settings);
-    for (const node of nodes) transformNode(node, matrix);
-    return depth > 0 ? addExtrusionVectors(nodes, extrusions, settings) : 0;
+    const transformed = nodes.map((node) => transformNode(node, matrix));
+    const mappedExtrusions = extrusions.map((extrusion) => ({ ...extrusion, id: transformed[nodes.findIndex((node) => node.id === extrusion.id)]?.id || extrusion.id }));
+    figma.currentPage.selection = transformed;
+    return depth > 0 ? addExtrusionVectors(transformed, mappedExtrusions, settings) : 0;
   }
 
   function commit(settings: PluginSettings, extrusions: readonly ExtrusionVector[] = [], record = true): HistoryAction | null {
@@ -330,8 +378,6 @@ if (figma.editorType !== 'figma') {
       const detail = error instanceof Error ? error.message : 'Could not apply this transform';
       notice(`Apply failed: ${detail}`);
       return null;
-    } finally {
-      void sendSelection();
     }
   }
 
@@ -343,6 +389,8 @@ if (figma.editorType !== 'figma') {
       const node = originalSource(selected);
       const original = readOriginal(node);
       if (!original) { nextSelection.push(selected); continue; }
+      // Reveal preserved text before removing its generated face and ungrouping.
+      if (original.visible !== undefined) node.visible = original.visible;
       for (const id of original.extrusionIds) {
         const body = await figma.getNodeByIdAsync(id);
         if (body && body.getPluginData(EXTRUSION_SOURCE_KEY) === node.id) body.remove();
@@ -350,11 +398,12 @@ if (figma.editorType !== 'figma') {
       while (node.parent?.type === 'GROUP' && node.parent.getPluginData(GROUP_SOURCE_KEY) === node.id) {
         figma.ungroup(node.parent);
       }
+      if (original.visible !== undefined) node.visible = original.visible;
       const current = node.relativeTransform;
       const centerX = current[0][0] * node.width / 2 + current[0][1] * node.height / 2 + current[0][2];
       const centerY = current[1][0] * node.width / 2 + current[1][1] * node.height / 2 + current[1][2];
       const resizable = node as SceneNode & { resize?: (width: number, height: number) => void };
-      if (typeof resizable.resize === 'function') resizable.resize(original.width, original.height);
+      if (typeof resizable.resize === 'function' && (Math.abs(node.width - original.width) > 1e-8 || Math.abs(node.height - original.height) > 1e-8)) resizable.resize(original.width, original.height);
       const [first, second] = original.transform;
       node.relativeTransform = [
         [first[0], first[1], centerX - first[0] * node.width / 2 - first[1] * node.height / 2],
@@ -385,7 +434,6 @@ if (figma.editorType !== 'figma') {
     figma.triggerUndo();
     undoHistory.pop();
     redoHistory.push(action);
-    redoneIds.clear();
     await selectHistoryNodes(action.beforeIds);
     sendHistory();
     await sendSelection();
@@ -398,7 +446,18 @@ if (figma.editorType !== 'figma') {
       notice('Cannot redo: the original layers are unavailable');
       return;
     }
-    const replayed = action.type === 'apply' ? commit(action.settings, action.extrusions, false) : await restoreSelection(false);
+    // Recreated groups have new IDs. Paths must follow the restored source position too.
+    const currentNodes = selectedNodes();
+    const extrusions = action.type === 'apply' ? action.extrusions.map((extrusion) => {
+      const node = currentNodes[action.beforeIds.indexOf(extrusion.id)];
+      if (!node) throw new Error('Cannot redo: the extrusion source is unavailable');
+      const bounds = ('absoluteRenderBounds' in node ? node.absoluteRenderBounds : null) || node.absoluteBoundingBox;
+      const offsetX = bounds && extrusion.sourceBounds ? bounds.x - extrusion.sourceBounds.x : 0;
+      const offsetY = bounds && extrusion.sourceBounds ? bounds.y - extrusion.sourceBounds.y : 0;
+      const move = (path: TracedPath | null): TracedPath | null => path ? { ...path, x: path.x + offsetX, y: path.y + offsetY } : null;
+      return { ...extrusion, id: node.id, body: move(extrusion.body), outline: move(extrusion.outline), sourceBounds: bounds || extrusion.sourceBounds };
+    }) : [];
+    const replayed = action.type === 'apply' ? commit(action.settings, extrusions, false) : await restoreSelection(false);
     if (!replayed) return;
     redoHistory.pop();
     undoHistory.push(replayed);
@@ -409,19 +468,58 @@ if (figma.editorType !== 'figma') {
   }
 
   figma.on('selectionchange', sendSelection);
-  figma.ui.onmessage = async (message: PluginMessage): Promise<void> => {
+  async function handleMessage(message: PluginMessage): Promise<void> {
     try {
       if (message.type === 'cancel') { figma.closePlugin(); return; }
-      if (message.type === 'reset') { notice('Preview reset'); return; }
-      if (message.type === 'restore') { await restoreSelection(); return; }
+      if (message.type === 'reset') {
+        notice('Preview reset');
+        return;
+      }
+      if (message.type === 'restore') {
+        const restored = await restoreSelection(!message.clearHistory);
+        if (restored && message.clearHistory) {
+          undoHistory.length = 0;
+          redoHistory.length = 0;
+          redoneIds.clear();
+          sendHistory();
+        }
+        return;
+      }
       if (message.type === 'undo') { await undoAction(); return; }
       if (message.type === 'redo') { await redoAction(); return; }
-      if (message.type === 'apply' && message.settings) { commit(message.settings, (message as PluginMessage & { extrusions?: ExtrusionVector[] }).extrusions || []); return; }
+      if (message.type === 'apply' && message.settings) {
+        const ids = selectedNodes().map((node) => node.id);
+        if (message.previewRevision !== previewRevision || (message.extrusions || []).some((extrusion) => !ids.includes(extrusion.id))) {
+          notice('Selection changed. Wait for the preview to refresh before applying.');
+          return;
+        }
+        commit(message.settings, message.extrusions || []);
+        return;
+      }
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unexpected plugin error';
       notice(`Action failed: ${detail}`);
       console.error('Vasometric action failed', error);
     }
+  }
+
+  figma.ui.onmessage = (message: PluginMessage): Promise<void> => {
+    // Figma does not await async UI handlers. Serialize document/history changes.
+    pendingActions += 1;
+    figma.ui.postMessage({ type: 'action-state', busy: true });
+    actionQueue = actionQueue.then(async () => {
+      try { await handleMessage(message); }
+      finally {
+        previewRevision += 1;
+        pendingActions -= 1;
+        if (pendingActions === 0) {
+          figma.ui.postMessage({ type: 'action-state', busy: false });
+          sendHistory();
+          await sendSelection();
+        }
+      }
+    });
+    return actionQueue;
   };
 
   sendSelection();

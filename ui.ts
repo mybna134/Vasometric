@@ -15,14 +15,15 @@ type ColorKey = 'extrusionColor' | 'outlineColor';
 type Control = { label: string; key: keyof Settings; min: number; max: number; value: number; suffix?: string; step?: number };
 type PreviewLayerData = { id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number; scale: number };
 type PreviewLayer = PreviewLayerData & { image: HTMLImageElement };
-type PreviewMessage = { nodes?: PreviewLayerData[]; bounds?: { x: number; y: number; width: number; height: number } | null };
+type PreviewMessage = { revision?: number; nodes?: PreviewLayerData[]; bounds?: { x: number; y: number; width: number; height: number } | null };
 type PreviewVisual = { matrix: [number, number, number, number]; dx: number; dy: number; depth: number; angle: number; scale: number; planeAngle: number; isoDirection: Direction | null };
 type TracedPath = { path: string; x: number; y: number };
-type ExtrusionVector = { id: string; body: TracedPath | null; outline: TracedPath | null; dx: number; dy: number };
+type ExtrusionVector = { id: string; body: TracedPath | null; outline: TracedPath | null; dx: number; dy: number; sourceBounds: { x: number; y: number; width: number; height: number } };
 type Language = 'en' | 'zh-CN';
 
 const translations: Record<Language, Record<string, string>> = {
   en: {
+    restoreConfirmTitle: 'Restore original?', restoreWarning: 'Selected layers will return to their original state and generated extrusion content will be removed. Deleting edit history permanently clears this plugin’s undo and redo records, so this restore cannot be undone.', restoreClearHistory: 'Delete edit history', cancel: 'Cancel', confirmRestore: 'Restore',
     'aria.transformMode': 'Transform mode', 'aria.preview': 'Selected layer transform preview', 'aria.angle': 'Angle in degrees', 'aria.perspectiveTools': 'Perspective tools',
     'mode.axonometric': 'Axonometric', 'mode.perspective': 'Perspective', canvasPreview: 'Canvas preview', emptyPreview: 'Select a layer to see its live preview', chooseLayers: 'Choose layers on the canvas',
     'direction.left': '← Left', 'direction.topLeft': '↙ Top left', 'direction.right': 'Right →', 'direction.topRight': 'Top right ↘', angle: 'Angle', snap: 'Snap', extrudeDepth: 'Extrude depth',
@@ -32,10 +33,11 @@ const translations: Record<Language, Record<string, string>> = {
     'control.shadowX': 'Offset X', 'control.shadowY': 'Offset Y', 'control.shadowBlur': 'Softness', 'control.shadowOpacity': 'Opacity',
     outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color', pickerLabel: 'Color picker', pickerSv: 'Saturation and brightness', pickerHue: 'Hue', pickerAlpha: 'Opacity', pickerClose: 'Close color picker', materialColors: 'Material colors', dragToAdjust: 'Drag up or down to adjust {name}',
     rotateHelp: 'Rotates around each layer’s center. X tilts vertically, Y turns sideways, and Z spins in the canvas.',
-    selected: '{count} selected', selectionReady: 'Showing the selected layers in this preview', chooseLayersToast: 'Select one or more layers on the canvas first', applied: 'Applied to {count} layer(s){extrusions}', addedExtrusions: ' · added {count} solid extrusion(s)', applyFailed: 'Apply failed: {detail}', actionFailed: 'Action failed: {detail}', previewReset: 'Preview reset',
+    selected: '{count} selected', selectionReady: 'Showing the selected layers in this preview', chooseLayersToast: 'Select one or more layers on the canvas first', applied: 'Applied to {count} layer(s){extrusions}', addedExtrusions: ' · added {count} solid extrusion(s)', applyFailed: 'Apply failed: {detail}', actionFailed: 'Action failed: {detail}', previewReset: 'Preview reset', selectionChanged: 'Selection changed. Wait for the preview to refresh before applying.',
     restored: 'Restored {count} layer(s)', noSavedTransform: 'No saved transform for the selected layers', encodeFailed: 'Could not prepare extrusion', done: 'Done',
   },
   'zh-CN': {
+    restoreConfirmTitle: '确认恢复原状？', restoreWarning: '所选图层将恢复原状，并移除生成的挤出内容。勾选“删除编辑历史”后，将清空本插件之前的撤回和重做记录，本次恢复操作也无法撤回。', restoreClearHistory: '删除编辑历史', cancel: '取消', confirmRestore: '确认恢复',
     'aria.transformMode': '变换模式', 'aria.preview': '所选图层变换预览', 'aria.angle': '角度（度）', 'aria.perspectiveTools': '透视工具',
     'mode.axonometric': '等轴测', 'mode.perspective': '透视', canvasPreview: '画布预览', emptyPreview: '选择图层以查看实时预览', chooseLayers: '请在画布上选择图层',
     'direction.left': '← 左侧', 'direction.topLeft': '↙ 左上', 'direction.right': '右侧 →', 'direction.topRight': '右上 ↘', angle: '角度', snap: '快捷角度', extrudeDepth: '挤出深度',
@@ -45,7 +47,7 @@ const translations: Record<Language, Record<string, string>> = {
     'control.shadowX': 'X 轴偏移', 'control.shadowY': 'Y 轴偏移', 'control.shadowBlur': '柔化程度', 'control.shadowOpacity': '不透明度',
     outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色', pickerLabel: '颜色选择器', pickerSv: '饱和度和明度', pickerHue: '色相', pickerAlpha: '不透明度', pickerClose: '关闭颜色选择器', materialColors: 'Material 配色', dragToAdjust: '上下拖动以调整{name}',
     rotateHelp: '围绕每个图层的中心旋转。X 轴控制垂直倾斜，Y 轴控制侧向旋转，Z 轴控制画布平面内旋转。',
-    selected: '已选择 {count} 个图层', selectionReady: '正在预览所选图层', chooseLayersToast: '请先在画布上选择一个或多个图层', applied: '已应用到 {count} 个图层{extrusions}', addedExtrusions: ' · 已添加 {count} 个实体挤出效果', applyFailed: '应用失败：{detail}', actionFailed: '操作失败：{detail}', previewReset: '已重置预览',
+    selected: '已选择 {count} 个图层', selectionReady: '正在预览所选图层', chooseLayersToast: '请先在画布上选择一个或多个图层', applied: '已应用到 {count} 个图层{extrusions}', addedExtrusions: ' · 已添加 {count} 个实体挤出效果', applyFailed: '应用失败：{detail}', actionFailed: '操作失败：{detail}', previewReset: '已重置预览', selectionChanged: '选区已变化，请等待预览更新后再应用。',
     restored: '已恢复 {count} 个图层', noSavedTransform: '所选图层没有可恢复的变换', encodeFailed: '无法生成挤出效果', done: '完成',
   },
 };
@@ -59,6 +61,18 @@ function detectLanguage(): Language {
 }
 let language: Language = detectLanguage();
 let selectionCount = 0;
+let selectionRevision = -1;
+let loadedPreviewRevision = -1;
+let actionBusy = false;
+let canRestore = false, undoCount = 0, redoCount = 0;
+
+function refreshActionButtons(): void {
+  $<HTMLButtonElement>('apply').disabled = actionBusy || selectionCount === 0 || loadedPreviewRevision !== selectionRevision;
+  $<HTMLButtonElement>('restore').disabled = actionBusy || !canRestore;
+  $<HTMLButtonElement>('undo').disabled = actionBusy || undoCount === 0;
+  $<HTMLButtonElement>('redo').disabled = actionBusy || redoCount === 0;
+  $<HTMLButtonElement>('reset').disabled = actionBusy;
+}
 
 function t(key: string, values: Record<string, string | number> = {}): string {
   return (translations[language][key] || translations.en[key] || key).replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? ''));
@@ -159,6 +173,7 @@ function setLanguage(next: Language): void {
 }
 
 function localizeNotice(message: string): string {
+  if (message === translations.en.selectionChanged) return t('selectionChanged');
   if (message === 'Select one or more layers on the canvas first') return t('chooseLayersToast');
   if (message === 'Preview reset') return t('previewReset');
   if (message === 'No saved transform for the selected layers') return t('noSavedTransform');
@@ -665,7 +680,10 @@ function drawLayerPreview(visual?: PreviewVisual): void {
 }
 
 async function loadLayerPreview(payload: PreviewMessage): Promise<void> {
+  if (payload.revision !== selectionRevision) return;
   const revision = ++previewLoadRevision;
+  loadedPreviewRevision = -1;
+  refreshActionButtons();
   cancelAnimationFrame(previewAnimation);
   previewAnimation = 0;
   lastBodyBuild = 0;
@@ -695,8 +713,10 @@ async function loadLayerPreview(payload: PreviewMessage): Promise<void> {
       return null;
     }
   }));
-  if (revision !== previewLoadRevision) return;
+  if (revision !== previewLoadRevision || payload.revision !== selectionRevision) return;
   previewLayers = loaded.filter((layer): layer is PreviewLayer => layer !== null);
+  loadedPreviewRevision = previewLayers.length === selectionCount ? selectionRevision : -1;
+  refreshActionButtons();
   cancelAnimationFrame(previewAnimation);
   previewAnimation = 0;
   previewVisual = targetPreviewVisual();
@@ -802,7 +822,7 @@ function buildExtrusions(): ExtrusionVector[] {
     const body = makeSolidExtrusion(layer.image, layer.image.naturalWidth, layer.image.naturalHeight, matrix, dx, dy, { ...settings, extrusionColor: '#FFFFFFFF', backFace: false, outlineBase: false });
     const originX = layer.x + body.x / layer.scale, originY = layer.y + body.y / layer.scale;
     const face = settings.outlineBase ? projectedBackFace(layer, matrix, dx, dy, body) : null;
-    result.push({ id: layer.id, body: traceAlpha(body.canvas, originX, originY, layer.scale), outline: face ? traceAlpha(face, originX, originY, layer.scale) : null, dx: dx / layer.scale, dy: dy / layer.scale });
+    result.push({ id: layer.id, body: traceAlpha(body.canvas, originX, originY, layer.scale), outline: face ? traceAlpha(face, originX, originY, layer.scale) : null, dx: dx / layer.scale, dy: dy / layer.scale, sourceBounds: { x: layer.x, y: layer.y, width: layer.width, height: layer.height } });
   }
   return result;
 }
@@ -841,7 +861,7 @@ function extrusionOptionsMarkup(): string {
 }
 
 function colorControlMarkup(key: ColorKey): string {
-  return `<div class="color-control"><span>${t(key)}</span><button type="button" class="color-trigger" data-color-key="${key}" aria-controls="color-popover" aria-expanded="false" aria-label="${t(key)} ${settings[key]}"><span class="color-swatch" aria-hidden="true"><span class="color-swatch-fill" style="background-color:${colorToRgba(settings[key])}"></span></span><span class="color-value">${settings[key]}</span></button></div>`;
+  return `<div class="color-control"><span>${t(key)}</span><button type="button" class="color-trigger" data-color-key="${key}" aria-controls="color-popover" aria-expanded="false" aria-label="${t(key)} ${settings[key]}"><span class="color-swatch" aria-hidden="true"><span class="color-swatch-fill" style="background-color:${colorToRgba(settings[key])}"></span></span><span class="color-value">${settings[key].slice(1, 7)}</span><span class="color-opacity"><span class="color-opacity-value">${Math.round(colorChannels(settings[key])[3] / 255 * 100)}</span><span class="color-opacity-unit">%</span></span></button></div>`;
 }
 
 function syncExtrusionInputs(): void {
@@ -854,8 +874,10 @@ function syncExtrusionInputs(): void {
     const value = settings[key];
     const fill = button.querySelector<HTMLElement>('.color-swatch-fill');
     const label = button.querySelector<HTMLElement>('.color-value');
+    const opacity = button.querySelector<HTMLElement>('.color-opacity-value');
     if (fill) fill.style.backgroundColor = colorToRgba(value);
-    if (label) label.textContent = value;
+    if (label) label.textContent = value.slice(1, 7);
+    if (opacity) opacity.textContent = String(Math.round(colorChannels(value)[3] / 255 * 100));
     button.setAttribute('aria-label', `${t(key)} ${value}`);
     button.setAttribute('aria-expanded', String(button === activeColorTrigger));
   });
@@ -970,7 +992,7 @@ function drawPerspectiveControls(): void {
   document.querySelectorAll<HTMLButtonElement>('.subtab').forEach((button) => button.classList.toggle('active', button.dataset.panel === settings.panel));
   container.innerHTML = controls[settings.panel].map((control) => {
     const label = t(`control.${control.key}`);
-    return `<div class="control"><span class="label">${label}</span><input type="range" min="${control.min}" max="${control.max}" step="${control.step || 1}" value="${settings[control.key]}" data-key="${control.key}" aria-label="${label}">${numberFieldMarkup(control.key, Number(settings[control.key]), control.min, control.max, control.step || 1, (control.suffix || '').trim(), label)}</div>`;
+    return `<div class="control"><span class="label">${label}</span>${numberFieldMarkup(control.key, Number(settings[control.key]), control.min, control.max, control.step || 1, (control.suffix || '').trim(), label)}</div>`;
   }).join('')
     + (settings.panel === '3d' ? `<p class="helper">${t('rotateHelp')}</p>` : '')
     + (settings.panel === 'extrusion' ? extrusionOptionsMarkup() : '');
@@ -1052,7 +1074,7 @@ function bindValueDragHandles(root: ParentNode = document): void {
 
 document.addEventListener('click', (event) => {
   const button = event.target instanceof Element ? event.target.closest('button') : null;
-  if (!button) return;
+  if (!button || button.classList.contains('color-trigger')) return;
   button.classList.remove('clicked');
   void button.offsetWidth;
   button.classList.add('clicked');
@@ -1100,10 +1122,34 @@ function resetAll(): void {
   rebuildBodyMeshes(previewVisual);
   refreshOverlays();
   drawLayerPreview();
+  actionBusy = true;
+  loadedPreviewRevision = -1;
+  refreshActionButtons();
   post({ type: 'reset' });
 }
 
-$('reset').addEventListener('click', resetAll);
+$('reset').addEventListener('click', () => {
+  if (actionBusy) return;
+  setFabOpen(false);
+  resetAll();
+});
+$('restore').addEventListener('click', () => {
+  if (actionBusy || !canRestore) return;
+  setFabOpen(false);
+  closeColorPicker();
+  $<HTMLInputElement>('restore-clear-history').checked = true;
+  $<HTMLDialogElement>('restore-dialog').showModal();
+});
+$('restore-cancel').addEventListener('click', () => $<HTMLDialogElement>('restore-dialog').close());
+$('restore-confirm').addEventListener('click', () => {
+  if (actionBusy) return;
+  const clearHistory = $<HTMLInputElement>('restore-clear-history').checked;
+  $<HTMLDialogElement>('restore-dialog').close();
+  actionBusy = true;
+  loadedPreviewRevision = -1;
+  refreshActionButtons();
+  post({ type: 'restore', clearHistory });
+});
 let fabOpen = false;
 function setFabOpen(open: boolean): void {
   fabOpen = open;
@@ -1116,15 +1162,20 @@ function setFabOpen(open: boolean): void {
 $('fab-toggle').addEventListener('click', () => setFabOpen(!fabOpen));
 document.addEventListener('click', (event) => { if (fabOpen && event.target instanceof Node && !$('fab-area').contains(event.target)) setFabOpen(false); });
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && fabOpen) { setFabOpen(false); $<HTMLButtonElement>('fab-toggle').focus(); } });
-$('restore').addEventListener('click', () => { setFabOpen(false); post({ type: 'restore' }); });
 $('undo').addEventListener('click', () => { setFabOpen(false); post({ type: 'undo' }); });
 $('redo').addEventListener('click', () => { setFabOpen(false); post({ type: 'redo' }); });
 $('apply').addEventListener('click', () => {
-  const button = $('apply') as HTMLButtonElement;
-  button.disabled = true;
-  try { post({ type: 'apply', settings: { ...settings }, extrusions: buildExtrusions() }); }
-  catch (error) { showToast(error instanceof Error ? error.message : t('encodeFailed')); }
-  finally { button.disabled = false; }
+  if (actionBusy || loadedPreviewRevision !== selectionRevision || selectionCount === 0) return;
+  try {
+    const extrusions = buildExtrusions();
+    actionBusy = true;
+    refreshActionButtons();
+    post({ type: 'apply', previewRevision: loadedPreviewRevision, settings: { ...settings }, extrusions });
+  } catch (error) {
+    actionBusy = false;
+    refreshActionButtons();
+    showToast(error instanceof Error ? error.message : t('encodeFailed'));
+  }
 });
 $('generate-grid').addEventListener('click', () => {
   showIsometricGrid = !showIsometricGrid;
@@ -1240,20 +1291,30 @@ document.addEventListener('keydown', (event) => {
 $('app').querySelector('main')?.addEventListener('scroll', closeColorPicker);
 window.addEventListener('resize', closeColorPicker);
 ($<HTMLSelectElement>('language-select')).addEventListener('change', (event) => setLanguage((event.currentTarget as HTMLSelectElement).value as Language));
-window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; restorable?: number; undo?: number; redo?: number; text?: string } & PreviewMessage }>) => {
+window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; restorable?: number; undo?: number; redo?: number; busy?: boolean; text?: string } & PreviewMessage }>) => {
   const message = event.data.pluginMessage;
   if (!message) return;
   if (message.type === 'layer-preview') void loadLayerPreview(message);
   if (message.type === 'selection') {
+    selectionRevision = message.revision ?? -1;
+    loadedPreviewRevision = -1;
+    previewLoadRevision += 1;
     selectionCount = Number(message.count || 0);
-    ($<HTMLButtonElement>('restore')).disabled = !message.restorable;
+    canRestore = Boolean(message.restorable);
+    refreshActionButtons();
     $('selection').textContent = t('selected', { count: selectionCount });
     $('selection').classList.toggle('ready', selectionCount > 0);
     $('selection-text').textContent = t(selectionCount ? 'selectionReady' : 'chooseLayers');
   }
   if (message.type === 'history') {
-    $<HTMLButtonElement>('undo').disabled = !message.undo;
-    $<HTMLButtonElement>('redo').disabled = !message.redo;
+    undoCount = message.undo || 0;
+    redoCount = message.redo || 0;
+    refreshActionButtons();
+  }
+  if (message.type === 'action-state') {
+    actionBusy = Boolean(message.busy);
+    if (actionBusy) { loadedPreviewRevision = -1; previewLoadRevision += 1; }
+    refreshActionButtons();
   }
   if (message.type === 'notice') showToast(localizeNotice(message.text || String(message.count || t('done'))));
 };
