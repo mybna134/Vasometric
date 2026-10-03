@@ -27,6 +27,10 @@ type Matrix2D = { a: number; b: number; c: number; d: number };
 type LayerPreview = { id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number; scale: number };
 type PreviewBounds = { x: number; y: number; width: number; height: number };
 type ExtrusionBitmap = { id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number };
+type OriginalState = { version: 1; width: number; height: number; transform: Transform; effects?: Effect[]; extrusionIds: string[] };
+
+const ORIGINAL_KEY = 'vasometric-original-v1';
+const EXTRUSION_SOURCE_KEY = 'vasometric-extrusion-source';
 
 if (figma.editorType !== 'figma') {
   figma.closePlugin('Vasometric is available in Figma Design.');
@@ -38,9 +42,26 @@ if (figma.editorType !== 'figma') {
   const notice = (text: string): void => figma.ui.postMessage({ type: 'notice', text });
   let previewRevision = 0;
 
+  function readOriginal(node: SceneNode): OriginalState | null {
+    const data = node.getPluginData(ORIGINAL_KEY);
+    if (!data) return null;
+    try {
+      const value = JSON.parse(data) as OriginalState;
+      if (value.version !== 1 || !Number.isFinite(value.width) || !Number.isFinite(value.height) || !Array.isArray(value.transform) || value.transform.length !== 2) return null;
+      return { ...value, extrusionIds: Array.isArray(value.extrusionIds) ? value.extrusionIds.filter((id) => typeof id === 'string') : [] };
+    } catch { return null; }
+  }
+
+  function saveOriginal(node: SceneNode, effects = false): OriginalState {
+    const original = readOriginal(node) || { version: 1, width: node.width, height: node.height, transform: node.relativeTransform, extrusionIds: [] };
+    if (effects && original.effects === undefined && 'effects' in node) original.effects = [...node.effects];
+    node.setPluginData(ORIGINAL_KEY, JSON.stringify(original));
+    return original;
+  }
+
   async function sendSelection(): Promise<void> {
     const nodes = selectedNodes();
-    figma.ui.postMessage({ type: 'selection', count: nodes.length });
+    figma.ui.postMessage({ type: 'selection', count: nodes.length, restorable: nodes.filter((node) => readOriginal(node) !== null).length });
     const revision = ++previewRevision;
     if (nodes.length === 0) {
       figma.ui.postMessage({ type: 'layer-preview', nodes: [], bounds: null });
@@ -165,12 +186,17 @@ if (figma.editorType !== 'figma') {
       figma.currentPage.appendChild(body);
       body.x = bitmap.x;
       body.y = bitmap.y;
+      body.setPluginData(EXTRUSION_SOURCE_KEY, source.id);
+      const original = saveOriginal(source);
+      original.extrusionIds.push(body.id);
+      source.setPluginData(ORIGINAL_KEY, JSON.stringify(original));
       created += 1;
     }
     return created;
   }
 
   function applySettings(nodes: readonly SceneNode[], settings: PluginSettings, bitmaps: readonly ExtrusionBitmap[] = []): number {
+    for (const node of nodes) saveOriginal(node, settings.mode === 'perspective' && settings.shadowOpacity > 0);
     if (settings.mode === 'perspective' && settings.shadowOpacity > 0) {
       applyShadow(nodes, settings);
     }
@@ -185,18 +211,51 @@ if (figma.editorType !== 'figma') {
     if (!nodes.length) { notice('Select one or more layers on the canvas first'); return; }
     try {
       const extrusions = applySettings(nodes, settings, bitmaps);
+      figma.commitUndo();
       notice(`Applied to ${nodes.length} layer${nodes.length === 1 ? '' : 's'}${extrusions ? ` · added ${extrusions} solid extrusion${extrusions === 1 ? '' : 's'}` : ''}`);
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Could not apply this transform';
       notice(`Apply failed: ${detail}`);
+    } finally {
+      void sendSelection();
     }
   }
 
+  async function restoreSelection(): Promise<void> {
+    const nodes = selectedNodes();
+    let restored = 0;
+    for (const node of nodes) {
+      const original = readOriginal(node);
+      if (!original) continue;
+      for (const id of original.extrusionIds) {
+        const body = await figma.getNodeByIdAsync(id);
+        if (body && body.getPluginData(EXTRUSION_SOURCE_KEY) === node.id) body.remove();
+      }
+      const current = node.relativeTransform;
+      const centerX = current[0][0] * node.width / 2 + current[0][1] * node.height / 2 + current[0][2];
+      const centerY = current[1][0] * node.width / 2 + current[1][1] * node.height / 2 + current[1][2];
+      const resizable = node as SceneNode & { resize?: (width: number, height: number) => void };
+      if (typeof resizable.resize === 'function') resizable.resize(original.width, original.height);
+      const [first, second] = original.transform;
+      node.relativeTransform = [
+        [first[0], first[1], centerX - first[0] * node.width / 2 - first[1] * node.height / 2],
+        [second[0], second[1], centerY - second[0] * node.width / 2 - second[1] * node.height / 2],
+      ];
+      if (original.effects && 'effects' in node) (node as BlendMixin).effects = original.effects;
+      node.setPluginData(ORIGINAL_KEY, '');
+      restored += 1;
+    }
+    if (restored) figma.commitUndo();
+    notice(restored ? `Restored ${restored} layer${restored === 1 ? '' : 's'}` : 'No saved transform for the selected layers');
+    await sendSelection();
+  }
+
   figma.on('selectionchange', sendSelection);
-  figma.ui.onmessage = (message: PluginMessage): void => {
+  figma.ui.onmessage = async (message: PluginMessage): Promise<void> => {
     try {
       if (message.type === 'cancel') { figma.closePlugin(); return; }
       if (message.type === 'reset') { notice('Preview reset'); return; }
+      if (message.type === 'restore') { await restoreSelection(); return; }
       if (message.type === 'apply' && message.settings) { commit(message.settings, (message as PluginMessage & { extrusions?: ExtrusionBitmap[] }).extrusions || []); return; }
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unexpected plugin error';

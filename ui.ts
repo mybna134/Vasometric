@@ -21,27 +21,25 @@ const translations: Record<Language, Record<string, string>> = {
     'aria.transformMode': 'Transform mode', 'aria.preview': 'Selected layer transform preview', 'aria.angle': 'Angle in degrees', 'aria.perspectiveTools': 'Perspective tools',
     'mode.axonometric': 'Axonometric', 'mode.perspective': 'Perspective', canvasPreview: 'Canvas preview', emptyPreview: 'Select a layer to see its live preview', chooseLayers: 'Choose layers on the canvas',
     'direction.left': '← Left', 'direction.topLeft': '↙ Top left', 'direction.right': 'Right →', 'direction.topRight': 'Top right ↘', angle: 'Angle', snap: 'Snap', extrudeDepth: 'Extrude depth',
-    isometricHelp: 'Angle rotates each face in the canvas plane; 0° keeps the standard isometric view. To assemble a cube, use equal square faces, the same angle, and depth 0.',
-    showGrid: 'Show 3D cube grid', hideGrid: 'Hide 3D cube grid', 'panel.skew': 'Skew', 'panel.camera': 'Camera', 'panel.extrude': 'Extrude', 'panel.shadow': 'Shadow', reset: 'Reset preview', apply: 'Apply to selection',
+    showGrid: 'Show 3D cube grid', hideGrid: 'Hide 3D cube grid', 'panel.skew': 'Skew', 'panel.camera': 'Camera', 'panel.extrude': 'Extrude', 'panel.shadow': 'Shadow', reset: 'Reset preview', restore: 'Restore original', apply: 'Apply to selection',
     'control.skewX': 'Skew X', 'control.skewY': 'Skew Y', 'control.rotateX': 'Rotate X', 'control.rotateY': 'Rotate Y', 'control.rotateZ': 'Rotate Z', 'control.perspective': 'Perspective',
     'control.yaw': 'Camera yaw', 'control.pitch': 'Camera pitch', 'control.fov': 'Field of view', 'control.extrusionDepth': 'Depth', 'control.extrusionAngle': 'Direction', 'control.extrusionSteps': 'Segments',
     'control.shadowX': 'Offset X', 'control.shadowY': 'Offset Y', 'control.shadowBlur': 'Softness', 'control.shadowOpacity': 'Opacity',
     rotateHelp: 'Rotates around each layer’s center. X tilts vertically, Y turns sideways, and Z spins in the canvas.',
     selected: '{count} selected', selectionReady: 'Showing the selected layers in this preview', chooseLayersToast: 'Select one or more layers on the canvas first', applied: 'Applied to {count} layer(s){extrusions}', addedExtrusions: ' · added {count} solid extrusion(s)', applyFailed: 'Apply failed: {detail}', actionFailed: 'Action failed: {detail}', previewReset: 'Preview reset',
-    encodeFailed: 'Could not prepare extrusion', done: 'Done',
+    restored: 'Restored {count} layer(s)', noSavedTransform: 'No saved transform for the selected layers', encodeFailed: 'Could not prepare extrusion', done: 'Done',
   },
   'zh-CN': {
     'aria.transformMode': '变换模式', 'aria.preview': '所选图层变换预览', 'aria.angle': '角度（度）', 'aria.perspectiveTools': '透视工具',
     'mode.axonometric': '等轴测', 'mode.perspective': '透视', canvasPreview: '画布预览', emptyPreview: '选择图层以查看实时预览', chooseLayers: '请在画布上选择图层',
     'direction.left': '← 左侧', 'direction.topLeft': '↙ 左上', 'direction.right': '右侧 →', 'direction.topRight': '右上 ↘', angle: '角度', snap: '快捷角度', extrudeDepth: '挤出深度',
-    isometricHelp: '角度用于旋转画布平面中的各个面；0° 为标准等轴测视图。要拼成立方体，请使用大小相同的正方形面、相同角度，并将深度设为 0。',
-    showGrid: '显示 3D 立方体网格', hideGrid: '隐藏 3D 立方体网格', 'panel.skew': '倾斜', 'panel.camera': '相机', 'panel.extrude': '挤出', 'panel.shadow': '阴影', reset: '重置预览', apply: '应用到所选图层',
+    showGrid: '显示 3D 立方体网格', hideGrid: '隐藏 3D 立方体网格', 'panel.skew': '倾斜', 'panel.camera': '相机', 'panel.extrude': '挤出', 'panel.shadow': '阴影', reset: '重置预览', restore: '恢复原状', apply: '应用到所选图层',
     'control.skewX': 'X 轴倾斜', 'control.skewY': 'Y 轴倾斜', 'control.rotateX': '绕 X 轴旋转', 'control.rotateY': '绕 Y 轴旋转', 'control.rotateZ': '绕 Z 轴旋转', 'control.perspective': '透视强度',
     'control.yaw': '相机偏航角', 'control.pitch': '相机俯仰角', 'control.fov': '视野角度', 'control.extrusionDepth': '深度', 'control.extrusionAngle': '方向', 'control.extrusionSteps': '分段数',
     'control.shadowX': 'X 轴偏移', 'control.shadowY': 'Y 轴偏移', 'control.shadowBlur': '柔化程度', 'control.shadowOpacity': '不透明度',
     rotateHelp: '围绕每个图层的中心旋转。X 轴控制垂直倾斜，Y 轴控制侧向旋转，Z 轴控制画布平面内旋转。',
     selected: '已选择 {count} 个图层', selectionReady: '正在预览所选图层', chooseLayersToast: '请先在画布上选择一个或多个图层', applied: '已应用到 {count} 个图层{extrusions}', addedExtrusions: ' · 已添加 {count} 个实体挤出效果', applyFailed: '应用失败：{detail}', actionFailed: '操作失败：{detail}', previewReset: '已重置预览',
-    encodeFailed: '无法生成挤出效果', done: '完成',
+    restored: '已恢复 {count} 个图层', noSavedTransform: '所选图层没有可恢复的变换', encodeFailed: '无法生成挤出效果', done: '完成',
   },
 };
 
@@ -85,6 +83,9 @@ function setLanguage(next: Language): void {
 function localizeNotice(message: string): string {
   if (message === 'Select one or more layers on the canvas first') return t('chooseLayersToast');
   if (message === 'Preview reset') return t('previewReset');
+  if (message === 'No saved transform for the selected layers') return t('noSavedTransform');
+  const restored = message.match(/^Restored (\d+) layers?$/);
+  if (restored) return t('restored', { count: restored[1] });
   if (message === 'Could not encode extrusion image' || message === 'Could not prepare extrusion') return t('encodeFailed');
   const applied = message.match(/^Applied to (\d+) layers?(?: · added (\d+) solid extrusions?)?$/);
   if (applied) return t('applied', { count: applied[1], extrusions: applied[2] ? t('addedExtrusions', { count: applied[2] }) : '' });
@@ -739,6 +740,7 @@ function resetAll(): void {
 }
 
 $('reset').addEventListener('click', resetAll);
+$('restore').addEventListener('click', () => post({ type: 'restore' }));
 $('apply').addEventListener('click', () => {
   const button = $('apply') as HTMLButtonElement;
   button.disabled = true;
@@ -754,12 +756,13 @@ $('generate-grid').addEventListener('click', () => {
   drawLayerPreview();
 });
 ($<HTMLSelectElement>('language-select')).addEventListener('change', (event) => setLanguage((event.currentTarget as HTMLSelectElement).value as Language));
-window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; text?: string } & PreviewMessage }>) => {
+window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; restorable?: number; text?: string } & PreviewMessage }>) => {
   const message = event.data.pluginMessage;
   if (!message) return;
   if (message.type === 'layer-preview') void loadLayerPreview(message);
   if (message.type === 'selection') {
     selectionCount = Number(message.count || 0);
+    ($<HTMLButtonElement>('restore')).disabled = !message.restorable;
     $('selection').textContent = t('selected', { count: selectionCount });
     $('selection').classList.toggle('ready', selectionCount > 0);
     $('selection-text').textContent = t(selectionCount ? 'selectionReady' : 'chooseLayers');

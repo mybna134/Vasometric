@@ -66,9 +66,11 @@
       .secondary.selected { outline: 2px solid #6750a4; outline-offset: 1px; }
       .helper { color: #625d69; font-size: 10px; line-height: 1.45; }
       .grow { flex: 1; min-height: 0; }
-      .dock { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 2px; }
+      .dock { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px; padding-top: 2px; }
       .dock button { height: 40px; border: 1px solid #79747e; border-radius: 20px; color: #6750a4; background: transparent; cursor: pointer; font-weight: 650; }
       .dock button:hover { background: #f0edf4; }
+      .dock button:disabled { opacity: .45; cursor: not-allowed; }
+      .dock button:disabled:hover { background: transparent; }
       .dock .apply { border-color: #6750a4; color: #fff; background: #6750a4; box-shadow: 0 2px 4px #0002; }
       .dock .apply:hover { background: #5b4596; }
       .toast { position: fixed; z-index: 3; right: 18px; bottom: 70px; left: 18px; padding: 10px 13px; border-radius: 8px; color: #f5efff; background: #322f35; text-align: center; opacity: 0; transform: translateY(8px); transition: .18s ease; pointer-events: none; }
@@ -107,7 +109,6 @@
             <div class="control angle-control"><label class="label" for="angle-range" data-i18n="angle">Angle</label><input id="angle-range" type="range" min="-180" max="180" step="1" value="0" data-key="angle"><div class="angle-entry"><input id="angle-input" type="number" min="-180" max="180" step="1" value="0" data-key="angle" aria-label="Angle in degrees" data-i18n-aria="aria.angle"><span aria-hidden="true">°</span></div></div>
             <div class="quickrow"><span data-i18n="snap">Snap</span><button class="quick active" data-angle="0">0°</button><button class="quick" data-angle="30">30°</button><button class="quick" data-angle="45">45°</button></div>
             <label class="control"><span class="label" data-i18n="extrudeDepth">Extrude depth</span><input type="range" min="0" max="200" value="0" data-key="depth"><output data-output="depth">0 px</output></label>
-            <div class="helper" data-i18n="isometricHelp">Angle rotates each face in the canvas plane; 0° keeps the standard isometric view. To assemble a cube, use equal square faces, the same angle, and depth 0.</div>
           </div>
           <button class="secondary" id="generate-grid" aria-pressed="false" data-i18n="showGrid">Show 3D cube grid</button>
         </section>
@@ -118,7 +119,7 @@
           <div class="control-card" id="perspective-controls"></div>
         </section>
         <div class="grow"></div>
-        <footer class="dock"><button id="reset" data-i18n="reset">Reset preview</button><button class="apply" id="apply" data-i18n="apply">Apply to selection</button></footer>
+        <footer class="dock"><button id="reset" data-i18n="reset">Reset preview</button><button id="restore" data-i18n="restore" disabled>Restore original</button><button class="apply" id="apply" data-i18n="apply">Apply to selection</button></footer>
       </main>
       <div class="toast" id="toast"></div>
     </div>
