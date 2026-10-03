@@ -59,6 +59,8 @@
       .color-control input { width: 52px; height: 30px; padding: 2px; border: 1px solid #79747e; border-radius: 8px; background: #fff; cursor: pointer; }
       .color-control input::-webkit-color-swatch-wrapper { padding: 0; }
       .color-control input::-webkit-color-swatch { border: 0; border-radius: 5px; }
+      .opacity-control { display: grid; grid-template-columns: 100px 1fr 38px; align-items: center; gap: 9px; min-height: 30px; color: #49454f; }
+      .opacity-control output { color: #1d1b20; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
       .angle-entry { position: relative; }
       .angle-entry input { width: 100%; height: 28px; padding: 0 17px 0 4px; appearance: textfield; border: 1px solid #79747e; border-radius: 6px; color: #1d1b20; background: #fff; text-align: right; font-variant-numeric: tabular-nums; }
       .angle-entry input::-webkit-inner-spin-button, .angle-entry input::-webkit-outer-spin-button { appearance: none; margin: 0; }
@@ -123,7 +125,9 @@
                 <label class="option-toggle"><input type="checkbox" data-extrusion-option="backFace"><span data-i18n="backFace">Back face</span></label>
               </div>
               <label class="color-control"><span data-i18n="extrusionColor">Extrusion color</span><input type="color" data-extrusion-option="extrusionColor" value="#625d69"></label>
+              <label class="opacity-control"><span data-i18n="extrusionOpacity">Extrusion opacity</span><input type="range" min="0" max="100" step="1" value="100" data-extrusion-option="extrusionOpacity"><output data-extrusion-output="extrusionOpacity">100%</output></label>
               <label class="color-control"><span data-i18n="outlineColor">Outline color</span><input type="color" data-extrusion-option="outlineColor" value="#1d1b20"></label>
+              <label class="opacity-control"><span data-i18n="outlineOpacity">Outline opacity</span><input type="range" min="0" max="100" step="1" value="100" data-extrusion-option="outlineOpacity"><output data-extrusion-output="outlineOpacity">100%</output></label>
             </div>
           </div>
           <button class="secondary" id="generate-grid" aria-pressed="false" data-i18n="showGrid">Show 3D cube grid</button>

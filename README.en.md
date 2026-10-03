@@ -20,7 +20,7 @@
 
 ## Features
 
-- Preview axonometric transforms for selected layers, with direction, angle, and extrusion depth controls. Extrusions can outline the base, add a back face using the source artwork, and use custom extrusion and outline colors.
+- Preview axonometric transforms for selected layers, with direction, angle, and extrusion depth controls. Extrusions can outline the base, add a back face using the source artwork, and use custom extrusion and outline colors and opacity.
 - Adjust skew, 3D rotation, camera, extrusion, and shadows in perspective mode.
 - Show an isometric cube wireframe behind the preview. Figma layers change only when you click **Apply to selection**.
 - The first transform saves each layer's original size and orientation. Select it again and click **Restore original** to restore it in place and remove extrusion layers created by the plugin. **Reset preview** only resets panel settings.

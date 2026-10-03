@@ -7,10 +7,10 @@ type Settings = {
   mode: Mode; panel: Panel; direction: Direction; angle: number; depth: number;
   skewX: number; skewY: number; rotateX: number; rotateY: number; rotateZ: number; perspective: number;
   yaw: number; pitch: number; fov: number; extrusionDepth: number; extrusionAngle: number; extrusionSteps: number;
-  outlineBase: boolean; backFace: boolean; extrusionColor: string; outlineColor: string;
+  outlineBase: boolean; backFace: boolean; extrusionColor: string; outlineColor: string; extrusionOpacity: number; outlineOpacity: number;
   shadowX: number; shadowY: number; shadowBlur: number; shadowOpacity: number;
 };
-type ExtrusionStyle = Pick<Settings, 'outlineBase' | 'backFace' | 'extrusionColor' | 'outlineColor'>;
+type ExtrusionStyle = Pick<Settings, 'outlineBase' | 'backFace' | 'extrusionColor' | 'outlineColor' | 'extrusionOpacity' | 'outlineOpacity'>;
 type Control = { label: string; key: keyof Settings; min: number; max: number; value: number; suffix?: string; step?: number };
 type PreviewLayerData = { id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number; scale: number };
 type PreviewLayer = PreviewLayerData & { image: HTMLImageElement };
@@ -27,7 +27,7 @@ const translations: Record<Language, Record<string, string>> = {
     'control.skewX': 'Skew X', 'control.skewY': 'Skew Y', 'control.rotateX': 'Rotate X', 'control.rotateY': 'Rotate Y', 'control.rotateZ': 'Rotate Z', 'control.perspective': 'Perspective',
     'control.yaw': 'Camera yaw', 'control.pitch': 'Camera pitch', 'control.fov': 'Field of view', 'control.extrusionDepth': 'Depth', 'control.extrusionAngle': 'Direction', 'control.extrusionSteps': 'Segments',
     'control.shadowX': 'Offset X', 'control.shadowY': 'Offset Y', 'control.shadowBlur': 'Softness', 'control.shadowOpacity': 'Opacity',
-    outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color',
+    outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color', extrusionOpacity: 'Extrusion opacity', outlineOpacity: 'Outline opacity',
     rotateHelp: 'Rotates around each layer’s center. X tilts vertically, Y turns sideways, and Z spins in the canvas.',
     selected: '{count} selected', selectionReady: 'Showing the selected layers in this preview', chooseLayersToast: 'Select one or more layers on the canvas first', applied: 'Applied to {count} layer(s){extrusions}', addedExtrusions: ' · added {count} solid extrusion(s)', applyFailed: 'Apply failed: {detail}', actionFailed: 'Action failed: {detail}', previewReset: 'Preview reset',
     restored: 'Restored {count} layer(s)', noSavedTransform: 'No saved transform for the selected layers', encodeFailed: 'Could not prepare extrusion', done: 'Done',
@@ -40,7 +40,7 @@ const translations: Record<Language, Record<string, string>> = {
     'control.skewX': 'X 轴倾斜', 'control.skewY': 'Y 轴倾斜', 'control.rotateX': '绕 X 轴旋转', 'control.rotateY': '绕 Y 轴旋转', 'control.rotateZ': '绕 Z 轴旋转', 'control.perspective': '透视强度',
     'control.yaw': '相机偏航角', 'control.pitch': '相机俯仰角', 'control.fov': '视野角度', 'control.extrusionDepth': '深度', 'control.extrusionAngle': '方向', 'control.extrusionSteps': '分段数',
     'control.shadowX': 'X 轴偏移', 'control.shadowY': 'Y 轴偏移', 'control.shadowBlur': '柔化程度', 'control.shadowOpacity': '不透明度',
-    outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色',
+    outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色', extrusionOpacity: '挤出不透明度', outlineOpacity: '描边不透明度',
     rotateHelp: '围绕每个图层的中心旋转。X 轴控制垂直倾斜，Y 轴控制侧向旋转，Z 轴控制画布平面内旋转。',
     selected: '已选择 {count} 个图层', selectionReady: '正在预览所选图层', chooseLayersToast: '请先在画布上选择一个或多个图层', applied: '已应用到 {count} 个图层{extrusions}', addedExtrusions: ' · 已添加 {count} 个实体挤出效果', applyFailed: '应用失败：{detail}', actionFailed: '操作失败：{detail}', previewReset: '已重置预览',
     restored: '已恢复 {count} 个图层', noSavedTransform: '所选图层没有可恢复的变换', encodeFailed: '无法生成挤出效果', done: '完成',
@@ -102,7 +102,7 @@ const defaults: Settings = {
   mode: 'isometric', panel: 'skew', direction: 'right', angle: 0, depth: 0,
   skewX: 0, skewY: 0, rotateX: 0, rotateY: 0, rotateZ: 0, perspective: 800,
   yaw: 0, pitch: 0, fov: 50, extrusionDepth: 0, extrusionAngle: 45, extrusionSteps: 8,
-  outlineBase: false, backFace: false, extrusionColor: '#625d69', outlineColor: '#1d1b20',
+  outlineBase: false, backFace: false, extrusionColor: '#625d69', outlineColor: '#1d1b20', extrusionOpacity: 100, outlineOpacity: 100,
   shadowX: 12, shadowY: 16, shadowBlur: 24, shadowOpacity: 0,
 };
 const settings: Settings = { ...defaults };
@@ -243,7 +243,9 @@ function makeSolidExtrusion(image: HTMLImageElement, width: number, height: numb
   for (let step = steps; step >= 0; step -= 1) drawFace(ctx, dx * step / steps, dy * step / steps);
   ctx.globalCompositeOperation = 'destination-out';
   drawFace(ctx, 0, 0);
-  ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = style.extrusionColor; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalCompositeOperation = 'source-in'; ctx.globalAlpha = style.extrusionOpacity / 100;
+  ctx.fillStyle = style.extrusionColor; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
   if (style.backFace || style.outlineBase) {
     const back = document.createElement('canvas'); back.width = canvas.width; back.height = canvas.height;
@@ -260,8 +262,10 @@ function makeSolidExtrusion(image: HTMLImageElement, width: number, height: numb
             outlineCtx.drawImage(back, Math.cos(angle) * 2, Math.sin(angle) * 2);
           }
           outlineCtx.globalCompositeOperation = 'source-in';
+          outlineCtx.globalAlpha = style.outlineOpacity / 100;
           outlineCtx.fillStyle = style.outlineColor;
           outlineCtx.fillRect(0, 0, canvas.width, canvas.height);
+          outlineCtx.globalAlpha = 1;
           outlineCtx.globalCompositeOperation = 'destination-out';
           outlineCtx.drawImage(back, 0, 0);
           ctx.drawImage(outline, 0, 0);
@@ -676,7 +680,9 @@ function extrusionOptionsMarkup(): string {
       <label class="option-toggle"><input type="checkbox" data-extrusion-option="backFace" ${settings.backFace ? 'checked' : ''}><span>${t('backFace')}</span></label>
     </div>
     <label class="color-control"><span>${t('extrusionColor')}</span><input type="color" data-extrusion-option="extrusionColor" value="${settings.extrusionColor}"></label>
+    <label class="opacity-control"><span>${t('extrusionOpacity')}</span><input type="range" min="0" max="100" step="1" value="${settings.extrusionOpacity}" data-extrusion-option="extrusionOpacity"><output data-extrusion-output="extrusionOpacity">${settings.extrusionOpacity}%</output></label>
     <label class="color-control"><span>${t('outlineColor')}</span><input type="color" data-extrusion-option="outlineColor" value="${settings.outlineColor}"></label>
+    <label class="opacity-control"><span>${t('outlineOpacity')}</span><input type="range" min="0" max="100" step="1" value="${settings.outlineOpacity}" data-extrusion-option="outlineOpacity"><output data-extrusion-output="outlineOpacity">${settings.outlineOpacity}%</output></label>
   </div>`;
 }
 
@@ -686,6 +692,10 @@ function syncExtrusionInputs(): void {
     if (input.type === 'checkbox') input.checked = Boolean(settings[key]);
     else input.value = String(settings[key]);
   });
+  document.querySelectorAll<HTMLOutputElement>('[data-extrusion-output]').forEach((output) => {
+    const key = output.dataset.extrusionOutput as 'extrusionOpacity' | 'outlineOpacity';
+    output.textContent = `${settings[key]}%`;
+  });
 }
 
 function bindExtrusionOptions(root: ParentNode): void {
@@ -693,6 +703,7 @@ function bindExtrusionOptions(root: ParentNode): void {
     input.oninput = () => {
       const key = input.dataset.extrusionOption as keyof ExtrusionStyle;
       if (key === 'outlineBase' || key === 'backFace') settings[key] = input.checked;
+      else if (key === 'extrusionOpacity' || key === 'outlineOpacity') settings[key] = Number(input.value);
       else settings[key] = input.value;
       syncExtrusionInputs();
       emitPreview();
