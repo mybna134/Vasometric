@@ -7,10 +7,11 @@ type Settings = {
   mode: Mode; panel: Panel; direction: Direction; angle: number; depth: number;
   skewX: number; skewY: number; rotateX: number; rotateY: number; rotateZ: number; perspective: number;
   yaw: number; pitch: number; fov: number; extrusionDepth: number; extrusionAngle: number; extrusionSteps: number;
-  outlineBase: boolean; backFace: boolean; extrusionColor: string; outlineColor: string; extrusionOpacity: number; outlineOpacity: number;
+  outlineBase: boolean; backFace: boolean; extrusionColor: string; outlineColor: string;
   shadowX: number; shadowY: number; shadowBlur: number; shadowOpacity: number;
 };
-type ExtrusionStyle = Pick<Settings, 'outlineBase' | 'backFace' | 'extrusionColor' | 'outlineColor' | 'extrusionOpacity' | 'outlineOpacity'>;
+type ExtrusionStyle = Pick<Settings, 'outlineBase' | 'backFace' | 'extrusionColor' | 'outlineColor'>;
+type ColorKey = 'extrusionColor' | 'outlineColor';
 type Control = { label: string; key: keyof Settings; min: number; max: number; value: number; suffix?: string; step?: number };
 type PreviewLayerData = { id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number; scale: number };
 type PreviewLayer = PreviewLayerData & { image: HTMLImageElement };
@@ -27,7 +28,7 @@ const translations: Record<Language, Record<string, string>> = {
     'control.skewX': 'Skew X', 'control.skewY': 'Skew Y', 'control.rotateX': 'Rotate X', 'control.rotateY': 'Rotate Y', 'control.rotateZ': 'Rotate Z', 'control.perspective': 'Perspective',
     'control.yaw': 'Camera yaw', 'control.pitch': 'Camera pitch', 'control.fov': 'Field of view', 'control.extrusionDepth': 'Depth', 'control.extrusionAngle': 'Direction', 'control.extrusionSteps': 'Segments',
     'control.shadowX': 'Offset X', 'control.shadowY': 'Offset Y', 'control.shadowBlur': 'Softness', 'control.shadowOpacity': 'Opacity',
-    outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color', extrusionOpacity: 'Extrusion opacity', outlineOpacity: 'Outline opacity',
+    outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color', pickerLabel: 'Color picker', pickerRgb: 'Choose RGB color', pickerAlpha: 'Opacity', pickerClose: 'Close color picker',
     rotateHelp: 'Rotates around each layer’s center. X tilts vertically, Y turns sideways, and Z spins in the canvas.',
     selected: '{count} selected', selectionReady: 'Showing the selected layers in this preview', chooseLayersToast: 'Select one or more layers on the canvas first', applied: 'Applied to {count} layer(s){extrusions}', addedExtrusions: ' · added {count} solid extrusion(s)', applyFailed: 'Apply failed: {detail}', actionFailed: 'Action failed: {detail}', previewReset: 'Preview reset',
     restored: 'Restored {count} layer(s)', noSavedTransform: 'No saved transform for the selected layers', encodeFailed: 'Could not prepare extrusion', done: 'Done',
@@ -40,7 +41,7 @@ const translations: Record<Language, Record<string, string>> = {
     'control.skewX': 'X 轴倾斜', 'control.skewY': 'Y 轴倾斜', 'control.rotateX': '绕 X 轴旋转', 'control.rotateY': '绕 Y 轴旋转', 'control.rotateZ': '绕 Z 轴旋转', 'control.perspective': '透视强度',
     'control.yaw': '相机偏航角', 'control.pitch': '相机俯仰角', 'control.fov': '视野角度', 'control.extrusionDepth': '深度', 'control.extrusionAngle': '方向', 'control.extrusionSteps': '分段数',
     'control.shadowX': 'X 轴偏移', 'control.shadowY': 'Y 轴偏移', 'control.shadowBlur': '柔化程度', 'control.shadowOpacity': '不透明度',
-    outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色', extrusionOpacity: '挤出不透明度', outlineOpacity: '描边不透明度',
+    outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色', pickerLabel: '颜色选择器', pickerRgb: '选择 RGB 颜色', pickerAlpha: '不透明度', pickerClose: '关闭颜色选择器',
     rotateHelp: '围绕每个图层的中心旋转。X 轴控制垂直倾斜，Y 轴控制侧向旋转，Z 轴控制画布平面内旋转。',
     selected: '已选择 {count} 个图层', selectionReady: '正在预览所选图层', chooseLayersToast: '请先在画布上选择一个或多个图层', applied: '已应用到 {count} 个图层{extrusions}', addedExtrusions: ' · 已添加 {count} 个实体挤出效果', applyFailed: '应用失败：{detail}', actionFailed: '操作失败：{detail}', previewReset: '已重置预览',
     restored: '已恢复 {count} 个图层', noSavedTransform: '所选图层没有可恢复的变换', encodeFailed: '无法生成挤出效果', done: '完成',
@@ -61,6 +62,34 @@ function t(key: string, values: Record<string, string | number> = {}): string {
   return (translations[language][key] || translations.en[key] || key).replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? ''));
 }
 
+function normalizeHex8(value: string): string | null {
+  const hex = value.trim().replace(/^#/, '');
+  if (!/^[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(hex)) return null;
+  return `#${(hex.length === 6 ? `${hex}FF` : hex).toUpperCase()}`;
+}
+
+function parseRgba(value: string): string | null {
+  const match = value.trim().match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+%?))?\s*\)$/i);
+  if (!match) return null;
+  const channels = match.slice(1, 4).map(Number);
+  if (channels.some((channel) => channel > 255)) return null;
+  const alpha = match[4] ? (match[4].endsWith('%') ? Number(match[4].slice(0, -1)) / 100 : Number(match[4])) : 1;
+  if (!Number.isFinite(alpha) || alpha < 0 || alpha > 1) return null;
+  return `#${[...channels, Math.round(alpha * 255)].map((channel) => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}
+
+function colorToRgba(hex8: string): string {
+  const hex = normalizeHex8(hex8) || '#000000FF';
+  const channels = [1, 3, 5, 7].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${channels[3] / 255})`;
+}
+
+function colorToRgbaLabel(hex8: string): string {
+  const hex = normalizeHex8(hex8) || '#000000FF';
+  const channels = [1, 3, 5, 7].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${Number((channels[3] / 255).toFixed(3))})`;
+}
+
 function applyTranslations(): void {
   document.documentElement.lang = language;
   document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {
@@ -75,10 +104,12 @@ function applyTranslations(): void {
   $('selection').textContent = t('selected', { count: selectionCount });
   $('selection-text').textContent = t(selectionCount ? 'selectionReady' : 'chooseLayers');
   $('generate-grid').textContent = t(showIsometricGrid ? 'hideGrid' : 'showGrid');
+  drawIsometricExtrusionOptions();
   if (settings.mode === 'perspective') drawPerspectiveControls();
 }
 
 function setLanguage(next: Language): void {
+  closeColorPicker();
   language = next;
   try { localStorage.setItem('vasometric-language', language); } catch { /* Storage may be unavailable in the plugin iframe. */ }
   applyTranslations();
@@ -102,10 +133,12 @@ const defaults: Settings = {
   mode: 'isometric', panel: 'skew', direction: 'right', angle: 0, depth: 0,
   skewX: 0, skewY: 0, rotateX: 0, rotateY: 0, rotateZ: 0, perspective: 800,
   yaw: 0, pitch: 0, fov: 50, extrusionDepth: 0, extrusionAngle: 45, extrusionSteps: 8,
-  outlineBase: false, backFace: false, extrusionColor: '#625d69', outlineColor: '#1d1b20', extrusionOpacity: 100, outlineOpacity: 100,
+  outlineBase: false, backFace: false, extrusionColor: '#625D69FF', outlineColor: '#1D1B20FF',
   shadowX: 12, shadowY: 16, shadowBlur: 24, shadowOpacity: 0,
 };
 const settings: Settings = { ...defaults };
+let activeColorKey: ColorKey | null = null;
+let activeColorTrigger: HTMLButtonElement | null = null;
 let previewLayers: PreviewLayer[] = [];
 let previewBounds: PreviewMessage['bounds'] = null;
 let previewLoadRevision = 0;
@@ -243,9 +276,7 @@ function makeSolidExtrusion(image: HTMLImageElement, width: number, height: numb
   for (let step = steps; step >= 0; step -= 1) drawFace(ctx, dx * step / steps, dy * step / steps);
   ctx.globalCompositeOperation = 'destination-out';
   drawFace(ctx, 0, 0);
-  ctx.globalCompositeOperation = 'source-in'; ctx.globalAlpha = style.extrusionOpacity / 100;
-  ctx.fillStyle = style.extrusionColor; ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = colorToRgba(style.extrusionColor); ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.globalCompositeOperation = 'source-over';
   if (style.backFace || style.outlineBase) {
     const back = document.createElement('canvas'); back.width = canvas.width; back.height = canvas.height;
@@ -262,10 +293,8 @@ function makeSolidExtrusion(image: HTMLImageElement, width: number, height: numb
             outlineCtx.drawImage(back, Math.cos(angle) * 2, Math.sin(angle) * 2);
           }
           outlineCtx.globalCompositeOperation = 'source-in';
-          outlineCtx.globalAlpha = style.outlineOpacity / 100;
-          outlineCtx.fillStyle = style.outlineColor;
+          outlineCtx.fillStyle = colorToRgba(style.outlineColor);
           outlineCtx.fillRect(0, 0, canvas.width, canvas.height);
-          outlineCtx.globalAlpha = 1;
           outlineCtx.globalCompositeOperation = 'destination-out';
           outlineCtx.drawImage(back, 0, 0);
           ctx.drawImage(outline, 0, 0);
@@ -658,6 +687,7 @@ function emitPreview(): void {
 }
 
 function setMode(mode: Mode): void {
+  closeColorPicker();
   settings.mode = mode;
   document.querySelectorAll<HTMLButtonElement>('.mode').forEach((button) => button.classList.toggle('active', button.dataset.mode === mode));
   $('isometric-panel').hidden = mode !== 'isometric';
@@ -667,6 +697,7 @@ function setMode(mode: Mode): void {
 }
 
 function setPanel(panel: Panel): void {
+  closeColorPicker();
   settings.panel = panel;
   document.querySelectorAll<HTMLButtonElement>('.subtab').forEach((button) => button.classList.toggle('active', button.dataset.panel === panel));
   drawPerspectiveControls();
@@ -679,36 +710,96 @@ function extrusionOptionsMarkup(): string {
       <label class="option-toggle"><input type="checkbox" data-extrusion-option="outlineBase" ${settings.outlineBase ? 'checked' : ''}><span>${t('outlineBase')}</span></label>
       <label class="option-toggle"><input type="checkbox" data-extrusion-option="backFace" ${settings.backFace ? 'checked' : ''}><span>${t('backFace')}</span></label>
     </div>
-    <label class="color-control"><span>${t('extrusionColor')}</span><input type="color" data-extrusion-option="extrusionColor" value="${settings.extrusionColor}"></label>
-    <label class="opacity-control"><span>${t('extrusionOpacity')}</span><input type="range" min="0" max="100" step="1" value="${settings.extrusionOpacity}" data-extrusion-option="extrusionOpacity"><output data-extrusion-output="extrusionOpacity">${settings.extrusionOpacity}%</output></label>
-    <label class="color-control"><span>${t('outlineColor')}</span><input type="color" data-extrusion-option="outlineColor" value="${settings.outlineColor}"></label>
-    <label class="opacity-control"><span>${t('outlineOpacity')}</span><input type="range" min="0" max="100" step="1" value="${settings.outlineOpacity}" data-extrusion-option="outlineOpacity"><output data-extrusion-output="outlineOpacity">${settings.outlineOpacity}%</output></label>
+    ${colorControlMarkup('extrusionColor')}
+    ${colorControlMarkup('outlineColor')}
   </div>`;
 }
 
+function colorControlMarkup(key: ColorKey): string {
+  return `<div class="color-control"><span>${t(key)}</span><button type="button" class="color-trigger" data-color-key="${key}" aria-controls="color-popover" aria-expanded="false" aria-label="${t(key)} ${settings[key]}"><span class="color-swatch" aria-hidden="true"><span class="color-swatch-fill" style="background-color:${colorToRgba(settings[key])}"></span></span><span class="color-value">${settings[key]}</span></button></div>`;
+}
+
 function syncExtrusionInputs(): void {
-  document.querySelectorAll<HTMLInputElement>('[data-extrusion-option]').forEach((input) => {
-    const key = input.dataset.extrusionOption as keyof ExtrusionStyle;
-    if (input.type === 'checkbox') input.checked = Boolean(settings[key]);
-    else input.value = String(settings[key]);
+  document.querySelectorAll<HTMLInputElement>('input[data-extrusion-option]').forEach((input) => {
+    const key = input.dataset.extrusionOption as 'outlineBase' | 'backFace';
+    input.checked = settings[key];
   });
-  document.querySelectorAll<HTMLOutputElement>('[data-extrusion-output]').forEach((output) => {
-    const key = output.dataset.extrusionOutput as 'extrusionOpacity' | 'outlineOpacity';
-    output.textContent = `${settings[key]}%`;
+  document.querySelectorAll<HTMLButtonElement>('[data-color-key]').forEach((button) => {
+    const key = button.dataset.colorKey as ColorKey;
+    const value = settings[key];
+    const fill = button.querySelector<HTMLElement>('.color-swatch-fill');
+    const label = button.querySelector<HTMLElement>('.color-value');
+    if (fill) fill.style.backgroundColor = colorToRgba(value);
+    if (label) label.textContent = value;
+    button.setAttribute('aria-label', `${t(key)} ${value}`);
+    button.setAttribute('aria-expanded', String(button === activeColorTrigger));
   });
 }
 
 function bindExtrusionOptions(root: ParentNode): void {
-  root.querySelectorAll<HTMLInputElement>('[data-extrusion-option]').forEach((input) => {
+  root.querySelectorAll<HTMLInputElement>('input[data-extrusion-option]').forEach((input) => {
     input.oninput = () => {
-      const key = input.dataset.extrusionOption as keyof ExtrusionStyle;
-      if (key === 'outlineBase' || key === 'backFace') settings[key] = input.checked;
-      else if (key === 'extrusionOpacity' || key === 'outlineOpacity') settings[key] = Number(input.value);
-      else settings[key] = input.value;
+      const key = input.dataset.extrusionOption as 'outlineBase' | 'backFace';
+      settings[key] = input.checked;
       syncExtrusionInputs();
       emitPreview();
     };
   });
+}
+
+function drawIsometricExtrusionOptions(): void {
+  const container = $('isometric-extrusion-options');
+  container.innerHTML = extrusionOptionsMarkup();
+  bindExtrusionOptions(container);
+  syncExtrusionInputs();
+}
+
+function closeColorPicker(): void {
+  $('color-popover').hidden = true;
+  activeColorTrigger?.setAttribute('aria-expanded', 'false');
+  activeColorTrigger = null;
+  activeColorKey = null;
+}
+
+function refreshColorPicker(): void {
+  if (!activeColorKey) return;
+  const color = settings[activeColorKey];
+  $('picker-title').textContent = t(activeColorKey);
+  ($<HTMLInputElement>('picker-hex')).value = color;
+  ($<HTMLInputElement>('picker-hex')).removeAttribute('aria-invalid');
+  ($<HTMLInputElement>('picker-rgba')).value = colorToRgbaLabel(color);
+  ($<HTMLInputElement>('picker-rgba')).removeAttribute('aria-invalid');
+  ($<HTMLInputElement>('picker-native')).value = color.slice(0, 7);
+  ($<HTMLInputElement>('picker-alpha')).value = String(parseInt(color.slice(7, 9), 16));
+  $('picker-alpha-output').textContent = `${Math.round(parseInt(color.slice(7, 9), 16) / 255 * 100)}%`;
+  ($('picker-swatch-fill') as HTMLElement).style.backgroundColor = colorToRgba(color);
+}
+
+function openColorPicker(key: ColorKey, trigger: HTMLButtonElement): void {
+  if (activeColorTrigger === trigger) { closeColorPicker(); return; }
+  closeColorPicker();
+  activeColorKey = key;
+  activeColorTrigger = trigger;
+  const popover = $('color-popover');
+  popover.hidden = false;
+  refreshColorPicker();
+  const bounds = trigger.getBoundingClientRect();
+  const left = Math.max(12, Math.min(bounds.right - popover.offsetWidth, window.innerWidth - popover.offsetWidth - 12));
+  const below = bounds.bottom + 8;
+  const top = below + popover.offsetHeight <= window.innerHeight - 12 ? below : Math.max(12, bounds.top - popover.offsetHeight - 8);
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+  trigger.setAttribute('aria-expanded', 'true');
+  ($<HTMLInputElement>('picker-hex')).focus();
+  ($<HTMLInputElement>('picker-hex')).select();
+}
+
+function setActiveColor(value: string): void {
+  if (!activeColorKey) return;
+  settings[activeColorKey] = value;
+  syncExtrusionInputs();
+  refreshColorPicker();
+  emitPreview();
 }
 
 function drawPerspectiveControls(): void {
@@ -719,6 +810,7 @@ function drawPerspectiveControls(): void {
     + (settings.panel === 'extrusion' ? extrusionOptionsMarkup() : '');
   bindRangeInputs(container);
   bindExtrusionOptions(container);
+  syncExtrusionInputs();
 }
 
 function setAngle(value: number, syncInput = true): void {
@@ -776,6 +868,7 @@ angleInput.addEventListener('change', () => {
 });
 
 function resetAll(): void {
+  closeColorPicker();
   cancelAnimationFrame(previewAnimation);
   previewAnimation = 0;
   lastBodyBuild = 0;
@@ -799,8 +892,8 @@ function resetAll(): void {
     const next = defaults[key];
     if (typeof next === 'number') output.textContent = formatValue(key, next);
   });
+  drawIsometricExtrusionOptions();
   drawPerspectiveControls();
-  syncExtrusionInputs();
   $('toast').classList.remove('show');
   previewVisual = targetPreviewVisual();
   previewTarget = previewVisual;
@@ -826,6 +919,43 @@ $('generate-grid').addEventListener('click', () => {
   refreshOverlays();
   drawLayerPreview();
 });
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const trigger = target.closest<HTMLButtonElement>('[data-color-key]');
+  if (trigger) { openColorPicker(trigger.dataset.colorKey as ColorKey, trigger); return; }
+  if (!$('color-popover').contains(target)) closeColorPicker();
+});
+$('picker-close').addEventListener('click', closeColorPicker);
+($<HTMLInputElement>('picker-native')).addEventListener('input', (event) => {
+  if (!activeColorKey) return;
+  const rgb = (event.currentTarget as HTMLInputElement).value.toUpperCase();
+  setActiveColor(`${rgb}${settings[activeColorKey].slice(7)}`);
+});
+($<HTMLInputElement>('picker-alpha')).addEventListener('input', (event) => {
+  if (!activeColorKey) return;
+  const alpha = Number((event.currentTarget as HTMLInputElement).value).toString(16).padStart(2, '0').toUpperCase();
+  setActiveColor(`${settings[activeColorKey].slice(0, 7)}${alpha}`);
+});
+function bindColorTextField(id: string, parse: (value: string) => string | null): void {
+  const input = $<HTMLInputElement>(id);
+  input.addEventListener('change', () => {
+    const color = parse(input.value);
+    if (color) setActiveColor(color);
+    else input.setAttribute('aria-invalid', 'true');
+  });
+  input.addEventListener('keydown', (event) => { if (event.key === 'Enter') input.blur(); });
+}
+bindColorTextField('picker-hex', normalizeHex8);
+bindColorTextField('picker-rgba', parseRgba);
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || !activeColorKey) return;
+  const trigger = activeColorTrigger;
+  closeColorPicker();
+  trigger?.focus();
+});
+$('app').querySelector('main')?.addEventListener('scroll', closeColorPicker);
+window.addEventListener('resize', closeColorPicker);
 ($<HTMLSelectElement>('language-select')).addEventListener('change', (event) => setLanguage((event.currentTarget as HTMLSelectElement).value as Language));
 window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; restorable?: number; text?: string } & PreviewMessage }>) => {
   const message = event.data.pluginMessage;
@@ -843,6 +973,5 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?
 
 applyTranslations();
 bindRangeInputs();
-bindExtrusionOptions($('isometric-extrusion-options'));
 drawPerspectiveControls();
 drawLayerPreview();

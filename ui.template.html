@@ -55,12 +55,30 @@
       .extrusion-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .option-toggle { display: flex; align-items: center; gap: 8px; min-height: 30px; color: #49454f; cursor: pointer; }
       .option-toggle input { width: 16px; height: 16px; margin: 0; accent-color: #6750a4; cursor: pointer; }
-      .color-control { display: flex; align-items: center; justify-content: space-between; min-height: 30px; color: #49454f; cursor: pointer; }
-      .color-control input { width: 52px; height: 30px; padding: 2px; border: 1px solid #79747e; border-radius: 8px; background: #fff; cursor: pointer; }
-      .color-control input::-webkit-color-swatch-wrapper { padding: 0; }
-      .color-control input::-webkit-color-swatch { border: 0; border-radius: 5px; }
-      .opacity-control { display: grid; grid-template-columns: 100px 1fr 38px; align-items: center; gap: 9px; min-height: 30px; color: #49454f; }
-      .opacity-control output { color: #1d1b20; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+      .color-control { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; color: #49454f; }
+      .color-trigger { display: inline-flex; align-items: center; gap: 7px; min-width: 132px; height: 32px; padding: 3px 7px; border: 1px solid #79747e; border-radius: 8px; background: #fff; cursor: pointer; }
+      .color-trigger:hover { border-color: #6750a4; background: #f0edf4; }
+      .color-trigger[aria-expanded="true"] { border: 2px solid #6750a4; }
+      .color-value { font-size: 10px; font-variant-numeric: tabular-nums; }
+      .color-swatch { position: relative; display: inline-block; flex: none; width: 25px; height: 24px; overflow: hidden; border: 1px solid #79747e; border-radius: 5px; background: conic-gradient(#d8d5dc 25%, #fff 0 50%, #d8d5dc 0 75%, #fff 0) 0 0 / 8px 8px; }
+      .color-swatch-fill { position: absolute; inset: 0; }
+      .color-popover { position: fixed; z-index: 10; width: 290px; padding: 14px; border: 1px solid #cac4d0; border-radius: 16px; background: #f7f5fa; box-shadow: 0 6px 20px #0003; }
+      .picker-header, .picker-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .picker-header { margin-bottom: 12px; font-size: 12px; }
+      .picker-close { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; font-size: 18px; }
+      .picker-close:hover { background: #e9e5ed; }
+      .picker-top { margin-bottom: 12px; }
+      .picker-top .color-swatch { width: 42px; height: 34px; }
+      .picker-native-label { display: flex; align-items: center; gap: 8px; color: #49454f; }
+      .picker-native-label input { width: 52px; height: 34px; padding: 2px; border: 1px solid #79747e; border-radius: 8px; background: #fff; cursor: pointer; }
+      .picker-native-label input::-webkit-color-swatch-wrapper { padding: 0; }
+      .picker-native-label input::-webkit-color-swatch { border: 0; border-radius: 5px; }
+      .picker-field { display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 9px; margin-top: 8px; color: #49454f; }
+      .picker-field input { width: 100%; height: 30px; padding: 0 8px; border: 1px solid #79747e; border-radius: 7px; color: #1d1b20; background: #fff; font-variant-numeric: tabular-nums; }
+      .picker-field input:focus { border-color: #6750a4; outline: 1px solid #6750a4; }
+      .picker-field input[aria-invalid="true"] { border-color: #b3261e; outline-color: #b3261e; }
+      .picker-alpha { display: grid; grid-template-columns: 48px 1fr 38px; align-items: center; gap: 9px; margin-top: 14px; color: #49454f; }
+      .picker-alpha output { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
       .angle-entry { position: relative; }
       .angle-entry input { width: 100%; height: 28px; padding: 0 17px 0 4px; appearance: textfield; border: 1px solid #79747e; border-radius: 6px; color: #1d1b20; background: #fff; text-align: right; font-variant-numeric: tabular-nums; }
       .angle-entry input::-webkit-inner-spin-button, .angle-entry input::-webkit-outer-spin-button { appearance: none; margin: 0; }
@@ -119,16 +137,7 @@
             <div class="control angle-control"><label class="label" for="angle-range" data-i18n="angle">Angle</label><input id="angle-range" type="range" min="-180" max="180" step="1" value="0" data-key="angle"><div class="angle-entry"><input id="angle-input" type="number" min="-180" max="180" step="1" value="0" data-key="angle" aria-label="Angle in degrees" data-i18n-aria="aria.angle"><span aria-hidden="true">°</span></div></div>
             <div class="quickrow"><span data-i18n="snap">Snap</span><button class="quick active" data-angle="0">0°</button><button class="quick" data-angle="30">30°</button><button class="quick" data-angle="45">45°</button></div>
             <label class="control"><span class="label" data-i18n="extrudeDepth">Extrude depth</span><input type="range" min="0" max="200" value="0" data-key="depth"><output data-output="depth">0 px</output></label>
-            <div class="extrusion-options" id="isometric-extrusion-options">
-              <div class="extrusion-toggles">
-                <label class="option-toggle"><input type="checkbox" data-extrusion-option="outlineBase"><span data-i18n="outlineBase">Outline base</span></label>
-                <label class="option-toggle"><input type="checkbox" data-extrusion-option="backFace"><span data-i18n="backFace">Back face</span></label>
-              </div>
-              <label class="color-control"><span data-i18n="extrusionColor">Extrusion color</span><input type="color" data-extrusion-option="extrusionColor" value="#625d69"></label>
-              <label class="opacity-control"><span data-i18n="extrusionOpacity">Extrusion opacity</span><input type="range" min="0" max="100" step="1" value="100" data-extrusion-option="extrusionOpacity"><output data-extrusion-output="extrusionOpacity">100%</output></label>
-              <label class="color-control"><span data-i18n="outlineColor">Outline color</span><input type="color" data-extrusion-option="outlineColor" value="#1d1b20"></label>
-              <label class="opacity-control"><span data-i18n="outlineOpacity">Outline opacity</span><input type="range" min="0" max="100" step="1" value="100" data-extrusion-option="outlineOpacity"><output data-extrusion-output="outlineOpacity">100%</output></label>
-            </div>
+            <div id="isometric-extrusion-options"></div>
           </div>
           <button class="secondary" id="generate-grid" aria-pressed="false" data-i18n="showGrid">Show 3D cube grid</button>
         </section>
@@ -141,6 +150,13 @@
         <div class="grow"></div>
         <footer class="dock"><button id="reset" data-i18n="reset">Reset preview</button><button id="restore" data-i18n="restore" disabled>Restore original</button><button class="apply" id="apply" data-i18n="apply">Apply to selection</button></footer>
       </main>
+      <div class="color-popover" id="color-popover" role="dialog" aria-label="Color picker" data-i18n-aria="pickerLabel" hidden>
+        <div class="picker-header"><strong id="picker-title">Extrusion color</strong><button class="picker-close" id="picker-close" aria-label="Close color picker" data-i18n-aria="pickerClose">×</button></div>
+        <div class="picker-top"><span class="color-swatch" aria-hidden="true"><span class="color-swatch-fill" id="picker-swatch-fill"></span></span><label class="picker-native-label">RGB <input id="picker-native" type="color" value="#625d69" aria-label="Choose RGB color" data-i18n-aria="pickerRgb"></label></div>
+        <label class="picker-field">HEX8 <input id="picker-hex" type="text" spellcheck="false" maxlength="9" value="#625D69FF" aria-label="8-digit HEX color"></label>
+        <label class="picker-field">RGBA <input id="picker-rgba" type="text" spellcheck="false" aria-label="RGBA color"></label>
+        <label class="picker-alpha"><span data-i18n="pickerAlpha">Opacity</span><input id="picker-alpha" type="range" min="0" max="255" step="1" value="255"><output id="picker-alpha-output">100%</output></label>
+      </div>
       <div class="toast" id="toast"></div>
     </div>
     <!-- BUN_UI_BUNDLE -->

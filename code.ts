@@ -20,8 +20,6 @@ type PluginSettings = {
   backFace: boolean;
   extrusionColor: string;
   outlineColor: string;
-  extrusionOpacity: number;
-  outlineOpacity: number;
   shadowX: number;
   shadowY: number;
   shadowBlur: number;
