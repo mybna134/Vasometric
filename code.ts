@@ -30,7 +30,8 @@ type PluginMessage = { type: string; settings?: PluginSettings };
 type Matrix2D = { a: number; b: number; c: number; d: number };
 type LayerPreview = { id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number; scale: number };
 type PreviewBounds = { x: number; y: number; width: number; height: number };
-type ExtrusionBitmap = { id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number };
+type TracedPath = { path: string; x: number; y: number };
+type ExtrusionVector = { id: string; body: TracedPath | null; outline: TracedPath | null; dx: number; dy: number };
 type OriginalState = { version: 1; width: number; height: number; transform: Transform; effects?: Effect[]; extrusionIds: string[] };
 
 const ORIGINAL_KEY = 'vasometric-original-v1';
@@ -192,38 +193,73 @@ if (figma.editorType !== 'figma') {
     }
   }
 
-  function addExtrusionBitmaps(nodes: readonly SceneNode[], bitmaps: readonly ExtrusionBitmap[]): number {
+  function vectorFromPath(path: TracedPath, color: string, outline = false): VectorNode {
+    const hex = color.replace(/^#/, '');
+    const rgb = [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255);
+    const opacity = parseInt(hex.slice(6, 8) || 'FF', 16) / 255;
+    const paint: SolidPaint = { type: 'SOLID', color: { r: rgb[0], g: rgb[1], b: rgb[2] }, opacity };
+    const vector = figma.createVector();
+    vector.vectorPaths = [{ windingRule: 'EVENODD', data: path.path }];
+    vector.x = path.x;
+    vector.y = path.y;
+    vector.fills = outline ? [] : [paint];
+    vector.strokes = outline ? [paint] : [];
+    if (outline) vector.strokeWeight = 2;
+    return vector;
+  }
+
+  function clearGeneratedData(node: SceneNode): void {
+    node.setPluginData(ORIGINAL_KEY, '');
+    node.setPluginData(GROUP_SOURCE_KEY, '');
+    node.setPluginData(EXTRUSION_SOURCE_KEY, '');
+    if ('children' in node) for (const child of node.children) clearGeneratedData(child);
+  }
+
+  function addExtrusionVectors(nodes: readonly SceneNode[], extrusions: readonly ExtrusionVector[], settings: PluginSettings): number {
     let created = 0;
     const replacements = new Map<string, SceneNode>();
-    for (const bitmap of bitmaps) {
-      const source = nodes.find((node) => node.id === bitmap.id);
-      if (!source || bitmap.bytes.length === 0) continue;
+    for (const extrusion of extrusions) {
+      const source = nodes.find((node) => node.id === extrusion.id);
+      if (!source || (!extrusion.body && !extrusion.outline && !settings.backFace)) continue;
       const parent = source.parent;
       if (!parent || !('children' in parent)) throw new Error('Cannot group this layer with its extrusion');
       const index = parent.children.indexOf(source);
       const originalNode = originalSource(source);
-      const image = figma.createImage(bitmap.bytes);
-      const body = figma.createRectangle();
-      body.name = `${source.name} · solid extrusion`;
-      body.resize(Math.max(1, bitmap.width), Math.max(1, bitmap.height));
-      body.fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageHash: image.hash }];
-      body.strokes = [];
-      figma.currentPage.appendChild(body);
-      body.x = bitmap.x;
-      body.y = bitmap.y;
-      body.setPluginData(EXTRUSION_SOURCE_KEY, originalNode.id);
+      const additions: SceneNode[] = [];
       let group: GroupNode;
       try {
-        group = figma.group([body, source], parent, index);
+        if (extrusion.body) {
+          const body = vectorFromPath(extrusion.body, settings.extrusionColor);
+          body.name = `${source.name} · solid extrusion`;
+          additions.push(body);
+        }
+        if (settings.backFace) {
+          const back = source.clone();
+          back.name = `${source.name} · back face`;
+          clearGeneratedData(back);
+          const absolute = source.absoluteTransform;
+          back.relativeTransform = [
+            [absolute[0][0], absolute[0][1], absolute[0][2] + extrusion.dx],
+            [absolute[1][0], absolute[1][1], absolute[1][2] + extrusion.dy],
+          ];
+          additions.push(back);
+        }
+        if (extrusion.outline) {
+          const outline = vectorFromPath(extrusion.outline, settings.outlineColor, true);
+          outline.name = `${source.name} · base outline`;
+          additions.push(outline);
+        }
+        for (const node of additions) node.setPluginData(EXTRUSION_SOURCE_KEY, originalNode.id);
+        group = figma.group([...additions, source], parent, index);
       } catch (error) {
-        body.remove();
+        for (const node of additions) if (!node.removed) node.remove();
         throw error;
       }
       group.name = source.name;
       group.setPluginData(GROUP_SOURCE_KEY, originalNode.id);
-      group.insertChild(0, body);
+      additions.forEach((node, order) => group.insertChild(order, node));
       const original = saveOriginal(originalNode);
-      original.extrusionIds.push(body.id);
+      original.extrusionIds.push(...additions.map((node) => node.id));
       originalNode.setPluginData(ORIGINAL_KEY, JSON.stringify(original));
       replacements.set(source.id, group);
       created += 1;
@@ -232,12 +268,12 @@ if (figma.editorType !== 'figma') {
     return created;
   }
 
-  function applySettings(nodes: readonly SceneNode[], settings: PluginSettings, bitmaps: readonly ExtrusionBitmap[] = []): number {
+  function applySettings(nodes: readonly SceneNode[], settings: PluginSettings, extrusions: readonly ExtrusionVector[] = []): number {
     const depth = settings.mode === 'isometric' ? settings.depth : settings.extrusionDepth;
     if (depth > 0) {
-      for (const bitmap of bitmaps) {
-        const source = nodes.find((node) => node.id === bitmap.id);
-        if (!source || bitmap.bytes.length === 0) continue;
+      for (const extrusion of extrusions) {
+        const source = nodes.find((node) => node.id === extrusion.id);
+        if (!source || (!extrusion.body && !extrusion.outline && !settings.backFace)) continue;
         if (source.parent?.type === 'COMPONENT_SET') throw new Error('Cannot group an extrusion directly in a component set');
         let ancestor: BaseNode | null = source.parent;
         while (ancestor) {
@@ -252,16 +288,16 @@ if (figma.editorType !== 'figma') {
     }
     const matrix = transformation(settings);
     for (const node of nodes) transformNode(node, matrix);
-    return depth > 0 ? addExtrusionBitmaps(nodes, bitmaps) : 0;
+    return depth > 0 ? addExtrusionVectors(nodes, extrusions, settings) : 0;
   }
 
-  function commit(settings: PluginSettings, bitmaps: readonly ExtrusionBitmap[] = []): void {
+  function commit(settings: PluginSettings, extrusions: readonly ExtrusionVector[] = []): void {
     const nodes = selectedNodes();
     if (!nodes.length) { notice('Select one or more layers on the canvas first'); return; }
     try {
-      const extrusions = applySettings(nodes, settings, bitmaps);
+      const count = applySettings(nodes, settings, extrusions);
       figma.commitUndo();
-      notice(`Applied to ${nodes.length} layer${nodes.length === 1 ? '' : 's'}${extrusions ? ` · added ${extrusions} solid extrusion${extrusions === 1 ? '' : 's'}` : ''}`);
+      notice(`Applied to ${nodes.length} layer${nodes.length === 1 ? '' : 's'}${count ? ` · added ${count} solid extrusion${count === 1 ? '' : 's'}` : ''}`);
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Could not apply this transform';
       notice(`Apply failed: ${detail}`);
@@ -314,7 +350,7 @@ if (figma.editorType !== 'figma') {
       if (message.type === 'cancel') { figma.closePlugin(); return; }
       if (message.type === 'reset') { notice('Preview reset'); return; }
       if (message.type === 'restore') { await restoreSelection(); return; }
-      if (message.type === 'apply' && message.settings) { commit(message.settings, (message as PluginMessage & { extrusions?: ExtrusionBitmap[] }).extrusions || []); return; }
+      if (message.type === 'apply' && message.settings) { commit(message.settings, (message as PluginMessage & { extrusions?: ExtrusionVector[] }).extrusions || []); return; }
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unexpected plugin error';
       notice(`Action failed: ${detail}`);

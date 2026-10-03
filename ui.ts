@@ -17,6 +17,8 @@ type PreviewLayerData = { id: string; bytes: Uint8Array; x: number; y: number; w
 type PreviewLayer = PreviewLayerData & { image: HTMLImageElement };
 type PreviewMessage = { nodes?: PreviewLayerData[]; bounds?: { x: number; y: number; width: number; height: number } | null };
 type PreviewVisual = { matrix: [number, number, number, number]; dx: number; dy: number; depth: number; angle: number; scale: number; planeAngle: number; isoDirection: Direction | null };
+type TracedPath = { path: string; x: number; y: number };
+type ExtrusionVector = { id: string; body: TracedPath | null; outline: TracedPath | null; dx: number; dy: number };
 type Language = 'en' | 'zh-CN';
 
 const translations: Record<Language, Record<string, string>> = {
@@ -150,7 +152,7 @@ function localizeNotice(message: string): string {
   if (message === 'No saved transform for the selected layers') return t('noSavedTransform');
   const restored = message.match(/^Restored (\d+) layers?$/);
   if (restored) return t('restored', { count: restored[1] });
-  if (message === 'Could not encode extrusion image' || message === 'Could not prepare extrusion') return t('encodeFailed');
+  if (message === 'Could not prepare extrusion') return t('encodeFailed');
   const applied = message.match(/^Applied to (\d+) layers?(?: · added (\d+) solid extrusions?)?$/);
   if (applied) return t('applied', { count: applied[1], extrusions: applied[2] ? t('addedExtrusions', { count: applied[2] }) : '' });
   const failed = message.match(/^(Apply failed|Action failed):\s*(.*)$/);
@@ -698,12 +700,90 @@ async function loadLayerPreview(payload: PreviewMessage): Promise<void> {
   drawLayerPreview();
 }
 
-async function canvasBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> {
-  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((result) => result ? resolve(result) : reject(new Error('Could not encode extrusion image')), 'image/png'));
-  return new Uint8Array(await blob.arrayBuffer());
+function traceAlpha(canvas: HTMLCanvasElement, documentX: number, documentY: number, pixelsPerUnit: number): TracedPath | null {
+  const sampleScale = Math.min(1, 768 / Math.max(canvas.width, canvas.height));
+  const sample = document.createElement('canvas');
+  sample.width = Math.max(1, Math.round(canvas.width * sampleScale));
+  sample.height = Math.max(1, Math.round(canvas.height * sampleScale));
+  const context = sample.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Could not prepare extrusion');
+  context.drawImage(canvas, 0, 0, sample.width, sample.height);
+  const alpha = context.getImageData(0, 0, sample.width, sample.height).data;
+  const width = sample.width, height = sample.height;
+  const filled = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < width && y < height && alpha[(y * width + x) * 4 + 3] > 4;
+  const edges = new Map<number, number[]>();
+  const stride = width + 1;
+  const add = (start: number, end: number): void => {
+    const next = edges.get(start) || [];
+    next.push(end);
+    edges.set(start, next);
+  };
+  for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+    if (!filled(x, y)) continue;
+    const top = y * stride + x;
+    if (!filled(x, y - 1)) add(top, top + 1);
+    if (!filled(x + 1, y)) add(top + 1, top + stride + 1);
+    if (!filled(x, y + 1)) add(top + stride + 1, top + stride);
+    if (!filled(x - 1, y)) add(top + stride, top);
+  }
+  if (!edges.size) return null;
+  const loops: number[][] = [];
+  const direction = (start: number, end: number): number => end === start + 1 ? 0 : end === start + stride ? 1 : end === start - 1 ? 2 : 3;
+  while (edges.size) {
+    const start = edges.keys().next().value as number;
+    const points = [start];
+    let current = start, previousDirection = -1;
+    do {
+      const options = edges.get(current);
+      if (!options?.length) break;
+      const selected = previousDirection < 0 ? 0 : options.reduce((best, end, index) => {
+        const turn = (direction(current, end) - previousDirection + 4) % 4;
+        const bestTurn = (direction(current, options[best]) - previousDirection + 4) % 4;
+        const rank = (value: number): number => value === 1 ? 0 : value === 0 ? 1 : value === 3 ? 2 : 3;
+        return rank(turn) < rank(bestTurn) ? index : best;
+      }, 0);
+      const next = options.splice(selected, 1)[0];
+      if (!options.length) edges.delete(current);
+      previousDirection = direction(current, next);
+      current = next;
+      points.push(current);
+    } while (current !== start);
+    if (current === start && points.length > 3) loops.push(points);
+  }
+  if (!loops.length) return null;
+  let minX = width, minY = height;
+  for (const loop of loops) for (const point of loop) {
+    minX = Math.min(minX, point % stride);
+    minY = Math.min(minY, Math.floor(point / stride));
+  }
+  const unit = 1 / (sampleScale * pixelsPerUnit);
+  const coordinate = (value: number): string => String(Number((value * unit).toFixed(3)));
+  const paths = loops.map((loop) => {
+    const vertices = loop.slice(0, -1);
+    const simplified = vertices.filter((point, index) => {
+      const before = vertices[(index + vertices.length - 1) % vertices.length];
+      const after = vertices[(index + 1) % vertices.length];
+      return (point % stride - before % stride) * (Math.floor(after / stride) - Math.floor(point / stride)) !== (Math.floor(point / stride) - Math.floor(before / stride)) * (after % stride - point % stride);
+    });
+    return simplified.map((point, index) => `${index ? 'L' : 'M'}${coordinate(point % stride - minX)} ${coordinate(Math.floor(point / stride) - minY)}`).join(' ') + ' Z';
+  });
+  return { path: paths.join(' '), x: documentX + minX * unit, y: documentY + minY * unit };
 }
 
-async function buildExtrusions(): Promise<Array<{ id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number }>> {
+function projectedBackFace(layer: PreviewLayer, matrix: [number, number, number, number], dx: number, dy: number, body: { canvas: HTMLCanvasElement; x: number; y: number }): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = body.canvas.width; canvas.height = body.canvas.height;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not prepare extrusion');
+  const width = layer.image.naturalWidth, height = layer.image.naturalHeight;
+  context.translate(width / 2 + dx - body.x, height / 2 + dy - body.y);
+  context.transform(matrix[0], matrix[1], matrix[2], matrix[3], 0, 0);
+  context.translate(-width / 2, -height / 2);
+  context.drawImage(layer.image, 0, 0, width, height);
+  return canvas;
+}
+
+function buildExtrusions(): ExtrusionVector[] {
   const iso = isIsometric();
   const depth = iso ? settings.depth : settings.extrusionDepth;
   if (depth <= 0 || !previewLayers.length || !previewBounds) return [];
@@ -713,8 +793,10 @@ async function buildExtrusions(): Promise<Array<{ id: string; bytes: Uint8Array;
   for (const layer of previewLayers) {
     const dx = Math.cos(angle * Math.PI / 180) * depth * layer.scale;
     const dy = Math.sin(angle * Math.PI / 180) * depth * layer.scale;
-    const body = makeSolidExtrusion(layer.image, layer.image.naturalWidth, layer.image.naturalHeight, matrix, dx, dy, settings);
-    result.push({ id: layer.id, bytes: await canvasBytes(body.canvas), x: layer.x + body.x / layer.scale, y: layer.y + body.y / layer.scale, width: body.canvas.width / layer.scale, height: body.canvas.height / layer.scale });
+    const body = makeSolidExtrusion(layer.image, layer.image.naturalWidth, layer.image.naturalHeight, matrix, dx, dy, { ...settings, extrusionColor: '#FFFFFFFF', backFace: false, outlineBase: false });
+    const originX = layer.x + body.x / layer.scale, originY = layer.y + body.y / layer.scale;
+    const face = settings.outlineBase ? projectedBackFace(layer, matrix, dx, dy, body) : null;
+    result.push({ id: layer.id, body: traceAlpha(body.canvas, originX, originY, layer.scale), outline: face ? traceAlpha(face, originX, originY, layer.scale) : null, dx: dx / layer.scale, dy: dy / layer.scale });
   }
   return result;
 }
@@ -977,7 +1059,9 @@ $('restore').addEventListener('click', () => post({ type: 'restore' }));
 $('apply').addEventListener('click', () => {
   const button = $('apply') as HTMLButtonElement;
   button.disabled = true;
-  void buildExtrusions().then((extrusions) => post({ type: 'apply', settings: { ...settings }, extrusions })).catch((error: unknown) => showToast(error instanceof Error ? error.message : t('encodeFailed'))).finally(() => { button.disabled = false; });
+  try { post({ type: 'apply', settings: { ...settings }, extrusions: buildExtrusions() }); }
+  catch (error) { showToast(error instanceof Error ? error.message : t('encodeFailed')); }
+  finally { button.disabled = false; }
 });
 $('generate-grid').addEventListener('click', () => {
   showIsometricGrid = !showIsometricGrid;
