@@ -35,6 +35,7 @@ type OriginalState = { version: 1; width: number; height: number; transform: Tra
 
 const ORIGINAL_KEY = 'vasometric-original-v1';
 const EXTRUSION_SOURCE_KEY = 'vasometric-extrusion-source';
+const GROUP_SOURCE_KEY = 'vasometric-group-source';
 
 if (figma.editorType !== 'figma') {
   figma.closePlugin('Vasometric is available in Figma Design.');
@@ -63,9 +64,24 @@ if (figma.editorType !== 'figma') {
     return original;
   }
 
+  function originalSource(node: SceneNode): SceneNode {
+    const sourceId = node.type === 'GROUP' ? node.getPluginData(GROUP_SOURCE_KEY) : '';
+    if (!sourceId) return node;
+    const findSource = (parent: SceneNode): SceneNode | null => {
+      if (parent.id === sourceId) return parent;
+      if (!('children' in parent)) return null;
+      for (const child of parent.children) {
+        const match = findSource(child);
+        if (match) return match;
+      }
+      return null;
+    };
+    return findSource(node) || node;
+  }
+
   async function sendSelection(): Promise<void> {
     const nodes = selectedNodes();
-    figma.ui.postMessage({ type: 'selection', count: nodes.length, restorable: nodes.filter((node) => readOriginal(node) !== null).length });
+    figma.ui.postMessage({ type: 'selection', count: nodes.length, restorable: nodes.filter((node) => readOriginal(originalSource(node)) !== null).length });
     const revision = ++previewRevision;
     if (nodes.length === 0) {
       figma.ui.postMessage({ type: 'layer-preview', nodes: [], bounds: null });
@@ -178,9 +194,14 @@ if (figma.editorType !== 'figma') {
 
   function addExtrusionBitmaps(nodes: readonly SceneNode[], bitmaps: readonly ExtrusionBitmap[]): number {
     let created = 0;
+    const replacements = new Map<string, SceneNode>();
     for (const bitmap of bitmaps) {
       const source = nodes.find((node) => node.id === bitmap.id);
       if (!source || bitmap.bytes.length === 0) continue;
+      const parent = source.parent;
+      if (!parent || !('children' in parent)) throw new Error('Cannot group this layer with its extrusion');
+      const index = parent.children.indexOf(source);
+      const originalNode = originalSource(source);
       const image = figma.createImage(bitmap.bytes);
       const body = figma.createRectangle();
       body.name = `${source.name} · solid extrusion`;
@@ -190,23 +211,47 @@ if (figma.editorType !== 'figma') {
       figma.currentPage.appendChild(body);
       body.x = bitmap.x;
       body.y = bitmap.y;
-      body.setPluginData(EXTRUSION_SOURCE_KEY, source.id);
-      const original = saveOriginal(source);
+      body.setPluginData(EXTRUSION_SOURCE_KEY, originalNode.id);
+      let group: GroupNode;
+      try {
+        group = figma.group([body, source], parent, index);
+      } catch (error) {
+        body.remove();
+        throw error;
+      }
+      group.name = source.name;
+      group.setPluginData(GROUP_SOURCE_KEY, originalNode.id);
+      group.insertChild(0, body);
+      const original = saveOriginal(originalNode);
       original.extrusionIds.push(body.id);
-      source.setPluginData(ORIGINAL_KEY, JSON.stringify(original));
+      originalNode.setPluginData(ORIGINAL_KEY, JSON.stringify(original));
+      replacements.set(source.id, group);
       created += 1;
     }
+    if (replacements.size) figma.currentPage.selection = nodes.map((node) => replacements.get(node.id) || node);
     return created;
   }
 
   function applySettings(nodes: readonly SceneNode[], settings: PluginSettings, bitmaps: readonly ExtrusionBitmap[] = []): number {
-    for (const node of nodes) saveOriginal(node, settings.mode === 'perspective' && settings.shadowOpacity > 0);
+    const depth = settings.mode === 'isometric' ? settings.depth : settings.extrusionDepth;
+    if (depth > 0) {
+      for (const bitmap of bitmaps) {
+        const source = nodes.find((node) => node.id === bitmap.id);
+        if (!source || bitmap.bytes.length === 0) continue;
+        if (source.parent?.type === 'COMPONENT_SET') throw new Error('Cannot group an extrusion directly in a component set');
+        let ancestor: BaseNode | null = source.parent;
+        while (ancestor) {
+          if (ancestor.type === 'INSTANCE') throw new Error('Cannot group an extrusion inside an instance');
+          ancestor = ancestor.parent;
+        }
+      }
+    }
+    for (const node of nodes) saveOriginal(originalSource(node), settings.mode === 'perspective' && settings.shadowOpacity > 0);
     if (settings.mode === 'perspective' && settings.shadowOpacity > 0) {
       applyShadow(nodes, settings);
     }
     const matrix = transformation(settings);
     for (const node of nodes) transformNode(node, matrix);
-    const depth = settings.mode === 'isometric' ? settings.depth : settings.extrusionDepth;
     return depth > 0 ? addExtrusionBitmaps(nodes, bitmaps) : 0;
   }
 
@@ -227,13 +272,18 @@ if (figma.editorType !== 'figma') {
 
   async function restoreSelection(): Promise<void> {
     const nodes = selectedNodes();
+    const nextSelection: SceneNode[] = [];
     let restored = 0;
-    for (const node of nodes) {
+    for (const selected of nodes) {
+      const node = originalSource(selected);
       const original = readOriginal(node);
-      if (!original) continue;
+      if (!original) { nextSelection.push(selected); continue; }
       for (const id of original.extrusionIds) {
         const body = await figma.getNodeByIdAsync(id);
         if (body && body.getPluginData(EXTRUSION_SOURCE_KEY) === node.id) body.remove();
+      }
+      while (node.parent?.type === 'GROUP' && node.parent.getPluginData(GROUP_SOURCE_KEY) === node.id) {
+        figma.ungroup(node.parent);
       }
       const current = node.relativeTransform;
       const centerX = current[0][0] * node.width / 2 + current[0][1] * node.height / 2 + current[0][2];
@@ -247,9 +297,13 @@ if (figma.editorType !== 'figma') {
       ];
       if (original.effects && 'effects' in node) (node as BlendMixin).effects = original.effects;
       node.setPluginData(ORIGINAL_KEY, '');
+      nextSelection.push(node);
       restored += 1;
     }
-    if (restored) figma.commitUndo();
+    if (restored) {
+      figma.currentPage.selection = nextSelection;
+      figma.commitUndo();
+    }
     notice(restored ? `Restored ${restored} layer${restored === 1 ? '' : 's'}` : 'No saved transform for the selected layers');
     await sendSelection();
   }
