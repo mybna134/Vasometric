@@ -7,8 +7,10 @@ type Settings = {
   mode: Mode; panel: Panel; direction: Direction; angle: number; depth: number;
   skewX: number; skewY: number; rotateX: number; rotateY: number; rotateZ: number; perspective: number;
   yaw: number; pitch: number; fov: number; extrusionDepth: number; extrusionAngle: number; extrusionSteps: number;
+  outlineBase: boolean; backFace: boolean; extrusionColor: string; outlineColor: string;
   shadowX: number; shadowY: number; shadowBlur: number; shadowOpacity: number;
 };
+type ExtrusionStyle = Pick<Settings, 'outlineBase' | 'backFace' | 'extrusionColor' | 'outlineColor'>;
 type Control = { label: string; key: keyof Settings; min: number; max: number; value: number; suffix?: string; step?: number };
 type PreviewLayerData = { id: string; bytes: Uint8Array; x: number; y: number; width: number; height: number; scale: number };
 type PreviewLayer = PreviewLayerData & { image: HTMLImageElement };
@@ -25,6 +27,7 @@ const translations: Record<Language, Record<string, string>> = {
     'control.skewX': 'Skew X', 'control.skewY': 'Skew Y', 'control.rotateX': 'Rotate X', 'control.rotateY': 'Rotate Y', 'control.rotateZ': 'Rotate Z', 'control.perspective': 'Perspective',
     'control.yaw': 'Camera yaw', 'control.pitch': 'Camera pitch', 'control.fov': 'Field of view', 'control.extrusionDepth': 'Depth', 'control.extrusionAngle': 'Direction', 'control.extrusionSteps': 'Segments',
     'control.shadowX': 'Offset X', 'control.shadowY': 'Offset Y', 'control.shadowBlur': 'Softness', 'control.shadowOpacity': 'Opacity',
+    outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color',
     rotateHelp: 'Rotates around each layer’s center. X tilts vertically, Y turns sideways, and Z spins in the canvas.',
     selected: '{count} selected', selectionReady: 'Showing the selected layers in this preview', chooseLayersToast: 'Select one or more layers on the canvas first', applied: 'Applied to {count} layer(s){extrusions}', addedExtrusions: ' · added {count} solid extrusion(s)', applyFailed: 'Apply failed: {detail}', actionFailed: 'Action failed: {detail}', previewReset: 'Preview reset',
     restored: 'Restored {count} layer(s)', noSavedTransform: 'No saved transform for the selected layers', encodeFailed: 'Could not prepare extrusion', done: 'Done',
@@ -37,6 +40,7 @@ const translations: Record<Language, Record<string, string>> = {
     'control.skewX': 'X 轴倾斜', 'control.skewY': 'Y 轴倾斜', 'control.rotateX': '绕 X 轴旋转', 'control.rotateY': '绕 Y 轴旋转', 'control.rotateZ': '绕 Z 轴旋转', 'control.perspective': '透视强度',
     'control.yaw': '相机偏航角', 'control.pitch': '相机俯仰角', 'control.fov': '视野角度', 'control.extrusionDepth': '深度', 'control.extrusionAngle': '方向', 'control.extrusionSteps': '分段数',
     'control.shadowX': 'X 轴偏移', 'control.shadowY': 'Y 轴偏移', 'control.shadowBlur': '柔化程度', 'control.shadowOpacity': '不透明度',
+    outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色',
     rotateHelp: '围绕每个图层的中心旋转。X 轴控制垂直倾斜，Y 轴控制侧向旋转，Z 轴控制画布平面内旋转。',
     selected: '已选择 {count} 个图层', selectionReady: '正在预览所选图层', chooseLayersToast: '请先在画布上选择一个或多个图层', applied: '已应用到 {count} 个图层{extrusions}', addedExtrusions: ' · 已添加 {count} 个实体挤出效果', applyFailed: '应用失败：{detail}', actionFailed: '操作失败：{detail}', previewReset: '已重置预览',
     restored: '已恢复 {count} 个图层', noSavedTransform: '所选图层没有可恢复的变换', encodeFailed: '无法生成挤出效果', done: '完成',
@@ -98,6 +102,7 @@ const defaults: Settings = {
   mode: 'isometric', panel: 'skew', direction: 'right', angle: 0, depth: 0,
   skewX: 0, skewY: 0, rotateX: 0, rotateY: 0, rotateZ: 0, perspective: 800,
   yaw: 0, pitch: 0, fov: 50, extrusionDepth: 0, extrusionAngle: 45, extrusionSteps: 8,
+  outlineBase: false, backFace: false, extrusionColor: '#625d69', outlineColor: '#1d1b20',
   shadowX: 12, shadowY: 16, shadowBlur: 24, shadowOpacity: 0,
 };
 const settings: Settings = { ...defaults };
@@ -216,36 +221,57 @@ function previewMatrix(): [number, number, number, number] {
   return matrix;
 }
 
-function averageColor(image: HTMLImageElement): string {
-  const sample = document.createElement('canvas'); sample.width = 24; sample.height = 24;
-  const ctx = sample.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return 'rgb(70, 65, 80)';
-  ctx.drawImage(image, 0, 0, 24, 24);
-  const pixels = ctx.getImageData(0, 0, 24, 24).data;
-  let r = 0, g = 0, b = 0, count = 0;
-  for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 3] > 40) { r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; count += 1; }
-  if (!count) return 'rgb(70, 65, 80)';
-  return `rgb(${Math.round(r / count * .62)}, ${Math.round(g / count * .62)}, ${Math.round(b / count * .62)})`;
-}
-
-function makeSolidExtrusion(image: HTMLImageElement, width: number, height: number, matrix: [number, number, number, number], dx: number, dy: number, maxSteps = 600): { canvas: HTMLCanvasElement; x: number; y: number } {
+function makeSolidExtrusion(image: HTMLImageElement, width: number, height: number, matrix: [number, number, number, number], dx: number, dy: number, style: ExtrusionStyle, maxSteps = 600): { canvas: HTMLCanvasElement; x: number; y: number } {
   const [a, b, c, d] = matrix;
   const corners = [[0, 0], [width, 0], [0, height], [width, height]].map(([x, y]) => [a * (x - width / 2) + c * (y - height / 2) + width / 2, b * (x - width / 2) + d * (y - height / 2) + height / 2]);
-  const pad = 2;
+  const pad = style.outlineBase ? 5 : 2;
   const left = Math.floor(Math.min(...corners.map(([x]) => x), ...corners.map(([x]) => x + dx)) - pad);
   const top = Math.floor(Math.min(...corners.map(([, y]) => y), ...corners.map(([, y]) => y + dy)) - pad);
   const right = Math.ceil(Math.max(...corners.map(([x]) => x), ...corners.map(([x]) => x + dx)) + pad);
   const bottom = Math.ceil(Math.max(...corners.map(([, y]) => y), ...corners.map(([, y]) => y + dy)) + pad);
   const canvas = document.createElement('canvas'); canvas.width = Math.max(1, right - left); canvas.height = Math.max(1, bottom - top);
   const ctx = canvas.getContext('2d'); if (!ctx) return { canvas, x: left, y: top };
+  const drawFace = (target: CanvasRenderingContext2D, offsetX: number, offsetY: number): void => {
+    target.save();
+    target.translate(width / 2 + offsetX - left, height / 2 + offsetY - top);
+    target.transform(a, b, c, d, 0, 0);
+    target.translate(-width / 2, -height / 2);
+    target.drawImage(image, 0, 0, width, height);
+    target.restore();
+  };
   const steps = Math.min(maxSteps, Math.max(1, Math.ceil(Math.hypot(dx, dy) * 2)));
-  for (let step = steps; step >= 0; step -= 1) {
-    const t = step / steps;
-    ctx.save(); ctx.translate(width / 2 + dx * t - left, height / 2 + dy * t - top); ctx.transform(a, b, c, d, 0, 0); ctx.translate(-width / 2, -height / 2);
-    ctx.drawImage(image, 0, 0, width, height); ctx.restore();
+  for (let step = steps; step >= 0; step -= 1) drawFace(ctx, dx * step / steps, dy * step / steps);
+  ctx.globalCompositeOperation = 'destination-out';
+  drawFace(ctx, 0, 0);
+  ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = style.extrusionColor; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalCompositeOperation = 'source-over';
+  if (style.backFace || style.outlineBase) {
+    const back = document.createElement('canvas'); back.width = canvas.width; back.height = canvas.height;
+    const backCtx = back.getContext('2d');
+    if (backCtx) {
+      drawFace(backCtx, dx, dy);
+      if (style.backFace) ctx.drawImage(back, 0, 0);
+      if (style.outlineBase) {
+        const outline = document.createElement('canvas'); outline.width = canvas.width; outline.height = canvas.height;
+        const outlineCtx = outline.getContext('2d');
+        if (outlineCtx) {
+          for (let index = 0; index < 24; index += 1) {
+            const angle = index * Math.PI / 12;
+            outlineCtx.drawImage(back, Math.cos(angle) * 2, Math.sin(angle) * 2);
+          }
+          outlineCtx.globalCompositeOperation = 'source-in';
+          outlineCtx.fillStyle = style.outlineColor;
+          outlineCtx.fillRect(0, 0, canvas.width, canvas.height);
+          outlineCtx.globalCompositeOperation = 'destination-out';
+          outlineCtx.drawImage(back, 0, 0);
+          ctx.drawImage(outline, 0, 0);
+        }
+      }
+    }
   }
-  ctx.save(); ctx.globalCompositeOperation = 'destination-out'; ctx.translate(width / 2 - left, height / 2 - top); ctx.transform(a, b, c, d, 0, 0); ctx.translate(-width / 2, -height / 2); ctx.drawImage(image, 0, 0, width, height); ctx.restore();
-  ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = averageColor(image); ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // The original Figma layer supplies the front face, so clear this bitmap there.
+  ctx.globalCompositeOperation = 'destination-out';
+  drawFace(ctx, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
   return { canvas, x: left, y: top };
 }
@@ -476,7 +502,7 @@ function rebuildBodyMeshes(visual: PreviewVisual, maxSteps = 600, rebuildShadows
   }
   for (const layer of previewLayers) {
     const width = layer.width * visual.scale, height = layer.height * visual.scale;
-    const body = makeSolidExtrusion(layer.image, width, height, visual.matrix, visual.dx, visual.dy, maxSteps);
+    const body = makeSolidExtrusion(layer.image, width, height, visual.matrix, visual.dx, visual.dy, settings, maxSteps);
     const texture = new THREE.CanvasTexture(body.canvas); texture.colorSpace = THREE.SRGBColorSpace;
     const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
@@ -617,7 +643,7 @@ async function buildExtrusions(): Promise<Array<{ id: string; bytes: Uint8Array;
   for (const layer of previewLayers) {
     const dx = Math.cos(angle * Math.PI / 180) * depth * layer.scale;
     const dy = Math.sin(angle * Math.PI / 180) * depth * layer.scale;
-    const body = makeSolidExtrusion(layer.image, layer.image.naturalWidth, layer.image.naturalHeight, matrix, dx, dy);
+    const body = makeSolidExtrusion(layer.image, layer.image.naturalWidth, layer.image.naturalHeight, matrix, dx, dy, settings);
     result.push({ id: layer.id, bytes: await canvasBytes(body.canvas), x: layer.x + body.x / layer.scale, y: layer.y + body.y / layer.scale, width: body.canvas.width / layer.scale, height: body.canvas.height / layer.scale });
   }
   return result;
@@ -643,12 +669,45 @@ function setPanel(panel: Panel): void {
   emitPreview();
 }
 
+function extrusionOptionsMarkup(): string {
+  return `<div class="extrusion-options">
+    <div class="extrusion-toggles">
+      <label class="option-toggle"><input type="checkbox" data-extrusion-option="outlineBase" ${settings.outlineBase ? 'checked' : ''}><span>${t('outlineBase')}</span></label>
+      <label class="option-toggle"><input type="checkbox" data-extrusion-option="backFace" ${settings.backFace ? 'checked' : ''}><span>${t('backFace')}</span></label>
+    </div>
+    <label class="color-control"><span>${t('extrusionColor')}</span><input type="color" data-extrusion-option="extrusionColor" value="${settings.extrusionColor}"></label>
+    <label class="color-control"><span>${t('outlineColor')}</span><input type="color" data-extrusion-option="outlineColor" value="${settings.outlineColor}"></label>
+  </div>`;
+}
+
+function syncExtrusionInputs(): void {
+  document.querySelectorAll<HTMLInputElement>('[data-extrusion-option]').forEach((input) => {
+    const key = input.dataset.extrusionOption as keyof ExtrusionStyle;
+    if (input.type === 'checkbox') input.checked = Boolean(settings[key]);
+    else input.value = String(settings[key]);
+  });
+}
+
+function bindExtrusionOptions(root: ParentNode): void {
+  root.querySelectorAll<HTMLInputElement>('[data-extrusion-option]').forEach((input) => {
+    input.oninput = () => {
+      const key = input.dataset.extrusionOption as keyof ExtrusionStyle;
+      if (key === 'outlineBase' || key === 'backFace') settings[key] = input.checked;
+      else settings[key] = input.value;
+      syncExtrusionInputs();
+      emitPreview();
+    };
+  });
+}
+
 function drawPerspectiveControls(): void {
   const container = $('perspective-controls');
   document.querySelectorAll<HTMLButtonElement>('.subtab').forEach((button) => button.classList.toggle('active', button.dataset.panel === settings.panel));
   container.innerHTML = controls[settings.panel].map((control) => `<label class="control"><span class="label">${t(`control.${control.key}`)}</span><input type="range" min="${control.min}" max="${control.max}" step="${control.step || 1}" value="${settings[control.key]}" data-key="${control.key}"><output data-output="${control.key}">${formatValue(control.key, Number(settings[control.key]))}</output></label>`).join('')
-    + (settings.panel === '3d' ? `<p class="helper">${t('rotateHelp')}</p>` : '');
+    + (settings.panel === '3d' ? `<p class="helper">${t('rotateHelp')}</p>` : '')
+    + (settings.panel === 'extrusion' ? extrusionOptionsMarkup() : '');
   bindRangeInputs(container);
+  bindExtrusionOptions(container);
 }
 
 function setAngle(value: number, syncInput = true): void {
@@ -730,6 +789,7 @@ function resetAll(): void {
     if (typeof next === 'number') output.textContent = formatValue(key, next);
   });
   drawPerspectiveControls();
+  syncExtrusionInputs();
   $('toast').classList.remove('show');
   previewVisual = targetPreviewVisual();
   previewTarget = previewVisual;
@@ -772,5 +832,6 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?
 
 applyTranslations();
 bindRangeInputs();
+bindExtrusionOptions($('isometric-extrusion-options'));
 drawPerspectiveControls();
 drawLayerPreview();

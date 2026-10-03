@@ -16,6 +16,10 @@ type PluginSettings = {
   extrusionDepth: number;
   extrusionAngle: number;
   extrusionSteps: number;
+  outlineBase: boolean;
+  backFace: boolean;
+  extrusionColor: string;
+  outlineColor: string;
   shadowX: number;
   shadowY: number;
   shadowBlur: number;
