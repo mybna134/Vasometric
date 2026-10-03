@@ -62,23 +62,35 @@
       .color-value { font-size: 10px; font-variant-numeric: tabular-nums; }
       .color-swatch { position: relative; display: inline-block; flex: none; width: 25px; height: 24px; overflow: hidden; border: 1px solid #79747e; border-radius: 5px; background: conic-gradient(#d8d5dc 25%, #fff 0 50%, #d8d5dc 0 75%, #fff 0) 0 0 / 8px 8px; }
       .color-swatch-fill { position: absolute; inset: 0; }
-      .color-popover { position: fixed; z-index: 10; width: 290px; padding: 14px; border: 1px solid #cac4d0; border-radius: 16px; background: #f7f5fa; box-shadow: 0 6px 20px #0003; }
-      .picker-header, .picker-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-      .picker-header { margin-bottom: 12px; font-size: 12px; }
+      .color-popover { position: fixed; z-index: 10; width: 326px; padding: 12px; border: 1px solid #cac4d0; border-radius: 16px; background: #f7f5fa; box-shadow: 0 6px 20px #0003; }
+      .picker-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 12px; }
       .picker-close { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; font-size: 18px; }
       .picker-close:hover { background: #e9e5ed; }
-      .picker-top { margin-bottom: 12px; }
-      .picker-top .color-swatch { width: 42px; height: 34px; }
-      .picker-native-label { display: flex; align-items: center; gap: 8px; color: #49454f; }
-      .picker-native-label input { width: 52px; height: 34px; padding: 2px; border: 1px solid #79747e; border-radius: 8px; background: #fff; cursor: pointer; }
-      .picker-native-label input::-webkit-color-swatch-wrapper { padding: 0; }
-      .picker-native-label input::-webkit-color-swatch { border: 0; border-radius: 5px; }
-      .picker-field { display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 9px; margin-top: 8px; color: #49454f; }
-      .picker-field input { width: 100%; height: 30px; padding: 0 8px; border: 1px solid #79747e; border-radius: 7px; color: #1d1b20; background: #fff; font-variant-numeric: tabular-nums; }
-      .picker-field input:focus { border-color: #6750a4; outline: 1px solid #6750a4; }
-      .picker-field input[aria-invalid="true"] { border-color: #b3261e; outline-color: #b3261e; }
-      .picker-alpha { display: grid; grid-template-columns: 48px 1fr 38px; align-items: center; gap: 9px; margin-top: 14px; color: #49454f; }
-      .picker-alpha output { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+      .picker-sv { position: relative; height: 188px; border-radius: 6px; background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent); cursor: crosshair; touch-action: none; }
+      .picker-sv:focus-visible { outline: 2px solid #6750a4; outline-offset: 2px; }
+      .picker-sv-thumb { position: absolute; width: 11px; height: 11px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #0009; transform: translate(-50%, -50%); pointer-events: none; }
+      .picker-strips { display: grid; grid-template-columns: 1fr 30px; align-items: stretch; gap: 8px; margin-top: 8px; }
+      .picker-bars { display: flex; flex-direction: column; justify-content: space-around; gap: 7px; }
+      .picker-bars input[type=range] { display: block; width: 100%; height: 10px; margin: 0; border-radius: 2px; cursor: ew-resize; }
+      #picker-hue { background: linear-gradient(to right, red, #ff0, #0f0, #0ff, #00f, #f0f, red); }
+      .picker-alpha-track { position: relative; height: 10px; border-radius: 2px; background: conic-gradient(#d8d5dc 25%, #fff 0 50%, #d8d5dc 0 75%, #fff 0) 0 0 / 8px 8px; }
+      #picker-alpha-gradient { position: absolute; inset: 0; border-radius: 2px; pointer-events: none; }
+      .picker-alpha-track input[type=range] { position: relative; background: transparent; }
+      .picker-bars input[type=range]::-webkit-slider-thumb { width: 7px; height: 16px; border: 2px solid #fff; border-radius: 2px; background: transparent; box-shadow: 0 0 0 1px #0007; }
+      .picker-strips .color-swatch { width: 30px; height: 29px; }
+      .picker-channels { display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 12px; }
+      .picker-channels label { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #625d69; font-size: 10px; }
+      .picker-channels input { width: 100%; height: 30px; padding: 0 3px; border: 1px solid #79747e; border-radius: 6px; color: #1d1b20; background: #fff; text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; }
+      .picker-channels input::-webkit-inner-spin-button, .picker-channels input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+      .picker-rgba-field { display: grid; grid-template-columns: 36px 1fr; align-items: center; gap: 7px; margin-top: 8px; color: #625d69; font-size: 10px; }
+      .picker-rgba-field input { width: 100%; height: 29px; padding: 0 7px; border: 1px solid #79747e; border-radius: 6px; color: #1d1b20; background: #fff; font-size: 11px; font-variant-numeric: tabular-nums; }
+      .color-popover input:focus { border-color: #6750a4; outline: 1px solid #6750a4; }
+      .color-popover input[aria-invalid="true"] { border-color: #b3261e; outline-color: #b3261e; }
+      .picker-material { margin-top: 12px; padding-top: 10px; border-top: 1px solid #c9c5cd; }
+      .picker-material-title { display: block; margin-bottom: 8px; color: #625d69; font-size: 10px; }
+      .picker-material-colors { display: flex; gap: 6px; overflow-x: auto; padding: 2px 1px 4px; }
+      .picker-material-colors button { flex: none; width: 22px; height: 22px; padding: 0; border: 1px solid #0002; border-radius: 6px; cursor: pointer; }
+      .picker-material-colors button[aria-pressed="true"] { outline: 2px solid #6750a4; outline-offset: 1px; }
       .angle-entry { position: relative; }
       .angle-entry input { width: 100%; height: 28px; padding: 0 17px 0 4px; appearance: textfield; border: 1px solid #79747e; border-radius: 6px; color: #1d1b20; background: #fff; text-align: right; font-variant-numeric: tabular-nums; }
       .angle-entry input::-webkit-inner-spin-button, .angle-entry input::-webkit-outer-spin-button { appearance: none; margin: 0; }
@@ -152,10 +164,11 @@
       </main>
       <div class="color-popover" id="color-popover" role="dialog" aria-label="Color picker" data-i18n-aria="pickerLabel" hidden>
         <div class="picker-header"><strong id="picker-title">Extrusion color</strong><button class="picker-close" id="picker-close" aria-label="Close color picker" data-i18n-aria="pickerClose">×</button></div>
-        <div class="picker-top"><span class="color-swatch" aria-hidden="true"><span class="color-swatch-fill" id="picker-swatch-fill"></span></span><label class="picker-native-label">RGB <input id="picker-native" type="color" value="#625d69" aria-label="Choose RGB color" data-i18n-aria="pickerRgb"></label></div>
-        <label class="picker-field">HEX8 <input id="picker-hex" type="text" spellcheck="false" maxlength="9" value="#625D69FF" aria-label="8-digit HEX color"></label>
-        <label class="picker-field">RGBA <input id="picker-rgba" type="text" spellcheck="false" aria-label="RGBA color"></label>
-        <label class="picker-alpha"><span data-i18n="pickerAlpha">Opacity</span><input id="picker-alpha" type="range" min="0" max="255" step="1" value="255"><output id="picker-alpha-output">100%</output></label>
+        <div class="picker-sv" id="picker-sv" role="group" tabindex="0" aria-label="Saturation and brightness" data-i18n-aria="pickerSv"><span class="picker-sv-thumb" id="picker-sv-thumb"></span></div>
+        <div class="picker-strips"><div class="picker-bars"><input id="picker-hue" type="range" min="0" max="360" step="1" value="0" aria-label="Hue" data-i18n-aria="pickerHue"><div class="picker-alpha-track"><div id="picker-alpha-gradient"></div><input id="picker-alpha" type="range" min="0" max="255" step="1" value="255" aria-label="Opacity" data-i18n-aria="pickerAlpha"></div></div><span class="color-swatch" aria-hidden="true"><span class="color-swatch-fill" id="picker-swatch-fill"></span></span></div>
+        <div class="picker-channels"><label><input id="picker-hex" type="text" spellcheck="false" maxlength="9" value="#625D69FF">HEX8</label><label><input id="picker-red" type="number" min="0" max="255" step="1">R</label><label><input id="picker-green" type="number" min="0" max="255" step="1">G</label><label><input id="picker-blue" type="number" min="0" max="255" step="1">B</label><label><input id="picker-alpha-value" type="number" min="0" max="100" step="1">A %</label></div>
+        <label class="picker-rgba-field">RGBA <input id="picker-rgba" type="text" spellcheck="false"></label>
+        <div class="picker-material"><span class="picker-material-title" data-i18n="materialColors">Material colors</span><div class="picker-material-colors" id="picker-material-colors"></div></div>
       </div>
       <div class="toast" id="toast"></div>
     </div>

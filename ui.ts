@@ -28,7 +28,7 @@ const translations: Record<Language, Record<string, string>> = {
     'control.skewX': 'Skew X', 'control.skewY': 'Skew Y', 'control.rotateX': 'Rotate X', 'control.rotateY': 'Rotate Y', 'control.rotateZ': 'Rotate Z', 'control.perspective': 'Perspective',
     'control.yaw': 'Camera yaw', 'control.pitch': 'Camera pitch', 'control.fov': 'Field of view', 'control.extrusionDepth': 'Depth', 'control.extrusionAngle': 'Direction', 'control.extrusionSteps': 'Segments',
     'control.shadowX': 'Offset X', 'control.shadowY': 'Offset Y', 'control.shadowBlur': 'Softness', 'control.shadowOpacity': 'Opacity',
-    outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color', pickerLabel: 'Color picker', pickerRgb: 'Choose RGB color', pickerAlpha: 'Opacity', pickerClose: 'Close color picker',
+    outlineBase: 'Outline base', backFace: 'Back face', extrusionColor: 'Extrusion color', outlineColor: 'Outline color', pickerLabel: 'Color picker', pickerSv: 'Saturation and brightness', pickerHue: 'Hue', pickerAlpha: 'Opacity', pickerClose: 'Close color picker', materialColors: 'Material colors',
     rotateHelp: 'Rotates around each layer’s center. X tilts vertically, Y turns sideways, and Z spins in the canvas.',
     selected: '{count} selected', selectionReady: 'Showing the selected layers in this preview', chooseLayersToast: 'Select one or more layers on the canvas first', applied: 'Applied to {count} layer(s){extrusions}', addedExtrusions: ' · added {count} solid extrusion(s)', applyFailed: 'Apply failed: {detail}', actionFailed: 'Action failed: {detail}', previewReset: 'Preview reset',
     restored: 'Restored {count} layer(s)', noSavedTransform: 'No saved transform for the selected layers', encodeFailed: 'Could not prepare extrusion', done: 'Done',
@@ -41,7 +41,7 @@ const translations: Record<Language, Record<string, string>> = {
     'control.skewX': 'X 轴倾斜', 'control.skewY': 'Y 轴倾斜', 'control.rotateX': '绕 X 轴旋转', 'control.rotateY': '绕 Y 轴旋转', 'control.rotateZ': '绕 Z 轴旋转', 'control.perspective': '透视强度',
     'control.yaw': '相机偏航角', 'control.pitch': '相机俯仰角', 'control.fov': '视野角度', 'control.extrusionDepth': '深度', 'control.extrusionAngle': '方向', 'control.extrusionSteps': '分段数',
     'control.shadowX': 'X 轴偏移', 'control.shadowY': 'Y 轴偏移', 'control.shadowBlur': '柔化程度', 'control.shadowOpacity': '不透明度',
-    outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色', pickerLabel: '颜色选择器', pickerRgb: '选择 RGB 颜色', pickerAlpha: '不透明度', pickerClose: '关闭颜色选择器',
+    outlineBase: '底面描边', backFace: '背面', extrusionColor: '挤出颜色', outlineColor: '描边颜色', pickerLabel: '颜色选择器', pickerSv: '饱和度和明度', pickerHue: '色相', pickerAlpha: '不透明度', pickerClose: '关闭颜色选择器', materialColors: 'Material 配色',
     rotateHelp: '围绕每个图层的中心旋转。X 轴控制垂直倾斜，Y 轴控制侧向旋转，Z 轴控制画布平面内旋转。',
     selected: '已选择 {count} 个图层', selectionReady: '正在预览所选图层', chooseLayersToast: '请先在画布上选择一个或多个图层', applied: '已应用到 {count} 个图层{extrusions}', addedExtrusions: ' · 已添加 {count} 个实体挤出效果', applyFailed: '应用失败：{detail}', actionFailed: '操作失败：{detail}', previewReset: '已重置预览',
     restored: '已恢复 {count} 个图层', noSavedTransform: '所选图层没有可恢复的变换', encodeFailed: '无法生成挤出效果', done: '完成',
@@ -68,6 +68,36 @@ function normalizeHex8(value: string): string | null {
   return `#${(hex.length === 6 ? `${hex}FF` : hex).toUpperCase()}`;
 }
 
+function colorChannels(hex8: string): [number, number, number, number] {
+  const hex = normalizeHex8(hex8) || '#000000FF';
+  return [1, 3, 5, 7].map((index) => parseInt(hex.slice(index, index + 2), 16)) as [number, number, number, number];
+}
+
+function rgbToHsv(red: number, green: number, blue: number): { hue: number; saturation: number; brightness: number } {
+  const r = red / 255, g = green / 255, b = blue / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
+  let hue = 0;
+  if (delta) {
+    if (max === r) hue = ((g - b) / delta) % 6;
+    else if (max === g) hue = (b - r) / delta + 2;
+    else hue = (r - g) / delta + 4;
+    hue = (hue * 60 + 360) % 360;
+  }
+  return { hue, saturation: max ? delta / max : 0, brightness: max };
+}
+
+function hsvToRgb(hue: number, saturation: number, brightness: number): [number, number, number] {
+  const chroma = brightness * saturation;
+  const sector = ((hue % 360) + 360) % 360 / 60;
+  const second = chroma * (1 - Math.abs(sector % 2 - 1));
+  const basis: [number, number, number] = sector < 1 ? [chroma, second, 0] : sector < 2 ? [second, chroma, 0] : sector < 3 ? [0, chroma, second] : sector < 4 ? [0, second, chroma] : sector < 5 ? [second, 0, chroma] : [chroma, 0, second];
+  return basis.map((channel) => Math.round((channel + brightness - chroma) * 255)) as [number, number, number];
+}
+
+function rgbToHex8(red: number, green: number, blue: number, alpha: number): string {
+  return `#${[red, green, blue, alpha].map((channel) => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}
+
 function parseRgba(value: string): string | null {
   const match = value.trim().match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+%?))?\s*\)$/i);
   if (!match) return null;
@@ -79,14 +109,12 @@ function parseRgba(value: string): string | null {
 }
 
 function colorToRgba(hex8: string): string {
-  const hex = normalizeHex8(hex8) || '#000000FF';
-  const channels = [1, 3, 5, 7].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  const channels = colorChannels(hex8);
   return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${channels[3] / 255})`;
 }
 
 function colorToRgbaLabel(hex8: string): string {
-  const hex = normalizeHex8(hex8) || '#000000FF';
-  const channels = [1, 3, 5, 7].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  const channels = colorChannels(hex8);
   return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${Number((channels[3] / 255).toFixed(3))})`;
 }
 
@@ -106,6 +134,7 @@ function applyTranslations(): void {
   $('generate-grid').textContent = t(showIsometricGrid ? 'hideGrid' : 'showGrid');
   drawIsometricExtrusionOptions();
   if (settings.mode === 'perspective') drawPerspectiveControls();
+  renderMaterialColors();
 }
 
 function setLanguage(next: Language): void {
@@ -139,6 +168,14 @@ const defaults: Settings = {
 const settings: Settings = { ...defaults };
 let activeColorKey: ColorKey | null = null;
 let activeColorTrigger: HTMLButtonElement | null = null;
+let pickerHue = 0, pickerSaturation = 0, pickerBrightness = 0;
+const materialColors = [
+  { hex: '#F44336', en: 'Red', zh: '红色' }, { hex: '#E91E63', en: 'Pink', zh: '粉色' },
+  { hex: '#9C27B0', en: 'Purple', zh: '紫色' }, { hex: '#3F51B5', en: 'Indigo', zh: '靛蓝' },
+  { hex: '#2196F3', en: 'Blue', zh: '蓝色' }, { hex: '#00BCD4', en: 'Cyan', zh: '青色' },
+  { hex: '#009688', en: 'Teal', zh: '蓝绿' }, { hex: '#4CAF50', en: 'Green', zh: '绿色' },
+  { hex: '#FFC107', en: 'Amber', zh: '琥珀' }, { hex: '#FF9800', en: 'Orange', zh: '橙色' },
+];
 let previewLayers: PreviewLayer[] = [];
 let previewBounds: PreviewMessage['bounds'] = null;
 let previewLoadRevision = 0;
@@ -761,18 +798,32 @@ function closeColorPicker(): void {
   activeColorKey = null;
 }
 
+function renderMaterialColors(): void {
+  $('picker-material-colors').innerHTML = materialColors.map((color) => `<button type="button" data-material-color="${color.hex}" style="background-color:${color.hex}" aria-label="Material ${language === 'zh-CN' ? color.zh : color.en}" aria-pressed="false" title="Material ${language === 'zh-CN' ? color.zh : color.en}"></button>`).join('');
+}
+
 function refreshColorPicker(): void {
   if (!activeColorKey) return;
   const color = settings[activeColorKey];
+  const [red, green, blue, alpha] = colorChannels(color);
   $('picker-title').textContent = t(activeColorKey);
   ($<HTMLInputElement>('picker-hex')).value = color;
   ($<HTMLInputElement>('picker-hex')).removeAttribute('aria-invalid');
   ($<HTMLInputElement>('picker-rgba')).value = colorToRgbaLabel(color);
   ($<HTMLInputElement>('picker-rgba')).removeAttribute('aria-invalid');
-  ($<HTMLInputElement>('picker-native')).value = color.slice(0, 7);
-  ($<HTMLInputElement>('picker-alpha')).value = String(parseInt(color.slice(7, 9), 16));
-  $('picker-alpha-output').textContent = `${Math.round(parseInt(color.slice(7, 9), 16) / 255 * 100)}%`;
+  ($<HTMLInputElement>('picker-red')).value = String(red);
+  ($<HTMLInputElement>('picker-green')).value = String(green);
+  ($<HTMLInputElement>('picker-blue')).value = String(blue);
+  ($<HTMLInputElement>('picker-alpha-value')).value = String(Math.round(alpha / 255 * 100));
+  for (const id of ['picker-red', 'picker-green', 'picker-blue', 'picker-alpha-value']) ($<HTMLInputElement>(id)).removeAttribute('aria-invalid');
+  ($<HTMLInputElement>('picker-hue')).value = String(Math.round(pickerHue));
+  ($<HTMLInputElement>('picker-alpha')).value = String(alpha);
+  ($('picker-sv') as HTMLElement).style.backgroundColor = `hsl(${pickerHue} 100% 50%)`;
+  ($('picker-sv-thumb') as HTMLElement).style.left = `${pickerSaturation * 100}%`;
+  ($('picker-sv-thumb') as HTMLElement).style.top = `${(1 - pickerBrightness) * 100}%`;
+  ($('picker-alpha-gradient') as HTMLElement).style.background = `linear-gradient(to right, rgba(${red}, ${green}, ${blue}, 0), rgb(${red}, ${green}, ${blue}))`;
   ($('picker-swatch-fill') as HTMLElement).style.backgroundColor = colorToRgba(color);
+  document.querySelectorAll<HTMLButtonElement>('[data-material-color]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.materialColor === color.slice(0, 7))));
 }
 
 function openColorPicker(key: ColorKey, trigger: HTMLButtonElement): void {
@@ -780,6 +831,9 @@ function openColorPicker(key: ColorKey, trigger: HTMLButtonElement): void {
   closeColorPicker();
   activeColorKey = key;
   activeColorTrigger = trigger;
+  const [red, green, blue] = colorChannels(settings[key]);
+  const hsv = rgbToHsv(red, green, blue);
+  pickerHue = hsv.hue; pickerSaturation = hsv.saturation; pickerBrightness = hsv.brightness;
   const popover = $('color-popover');
   popover.hidden = false;
   refreshColorPicker();
@@ -794,12 +848,27 @@ function openColorPicker(key: ColorKey, trigger: HTMLButtonElement): void {
   ($<HTMLInputElement>('picker-hex')).select();
 }
 
-function setActiveColor(value: string): void {
+function setActiveColor(value: string, preservePickerAxes = false): void {
   if (!activeColorKey) return;
-  settings[activeColorKey] = value;
+  const color = normalizeHex8(value);
+  if (!color) return;
+  settings[activeColorKey] = color;
+  if (!preservePickerAxes) {
+    const [red, green, blue] = colorChannels(color);
+    const hsv = rgbToHsv(red, green, blue);
+    if (hsv.saturation) pickerHue = hsv.hue;
+    pickerSaturation = hsv.saturation; pickerBrightness = hsv.brightness;
+  }
   syncExtrusionInputs();
   refreshColorPicker();
   emitPreview();
+}
+
+function applyPickerHsv(): void {
+  if (!activeColorKey) return;
+  const [red, green, blue] = hsvToRgb(pickerHue, pickerSaturation, pickerBrightness);
+  const alpha = colorChannels(settings[activeColorKey])[3];
+  setActiveColor(rgbToHex8(red, green, blue, alpha), true);
 }
 
 function drawPerspectiveControls(): void {
@@ -924,18 +993,64 @@ document.addEventListener('click', (event) => {
   if (!(target instanceof Element)) return;
   const trigger = target.closest<HTMLButtonElement>('[data-color-key]');
   if (trigger) { openColorPicker(trigger.dataset.colorKey as ColorKey, trigger); return; }
+  const material = target.closest<HTMLButtonElement>('[data-material-color]');
+  if (material && activeColorKey) {
+    setActiveColor(`${material.dataset.materialColor}${settings[activeColorKey].slice(7)}`);
+    return;
+  }
   if (!$('color-popover').contains(target)) closeColorPicker();
 });
 $('picker-close').addEventListener('click', closeColorPicker);
-($<HTMLInputElement>('picker-native')).addEventListener('input', (event) => {
-  if (!activeColorKey) return;
-  const rgb = (event.currentTarget as HTMLInputElement).value.toUpperCase();
-  setActiveColor(`${rgb}${settings[activeColorKey].slice(7)}`);
+($<HTMLInputElement>('picker-hue')).addEventListener('input', (event) => {
+  pickerHue = Number((event.currentTarget as HTMLInputElement).value);
+  applyPickerHsv();
 });
 ($<HTMLInputElement>('picker-alpha')).addEventListener('input', (event) => {
   if (!activeColorKey) return;
   const alpha = Number((event.currentTarget as HTMLInputElement).value).toString(16).padStart(2, '0').toUpperCase();
-  setActiveColor(`${settings[activeColorKey].slice(0, 7)}${alpha}`);
+  setActiveColor(`${settings[activeColorKey].slice(0, 7)}${alpha}`, true);
+});
+const saturationPicker = $('picker-sv');
+let saturationPointer: number | null = null;
+function updateSaturationPicker(event: PointerEvent): void {
+  const bounds = saturationPicker.getBoundingClientRect();
+  pickerSaturation = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+  pickerBrightness = 1 - Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
+  applyPickerHsv();
+}
+saturationPicker.addEventListener('pointerdown', (event) => {
+  saturationPointer = event.pointerId;
+  saturationPicker.setPointerCapture(event.pointerId);
+  updateSaturationPicker(event);
+});
+saturationPicker.addEventListener('pointermove', (event) => {
+  if (event.pointerId === saturationPointer) updateSaturationPicker(event);
+});
+saturationPicker.addEventListener('pointerup', () => { saturationPointer = null; });
+saturationPicker.addEventListener('pointercancel', () => { saturationPointer = null; });
+saturationPicker.addEventListener('keydown', (event) => {
+  const step = event.shiftKey ? .1 : .01;
+  if (event.key === 'ArrowLeft') pickerSaturation = Math.max(0, pickerSaturation - step);
+  else if (event.key === 'ArrowRight') pickerSaturation = Math.min(1, pickerSaturation + step);
+  else if (event.key === 'ArrowUp') pickerBrightness = Math.min(1, pickerBrightness + step);
+  else if (event.key === 'ArrowDown') pickerBrightness = Math.max(0, pickerBrightness - step);
+  else return;
+  event.preventDefault();
+  applyPickerHsv();
+});
+(['red', 'green', 'blue', 'alpha-value'] as const).forEach((channel) => {
+  const input = $<HTMLInputElement>(`picker-${channel}`);
+  input.addEventListener('change', () => {
+    if (!activeColorKey) return;
+    const value = Number(input.value);
+    const maximum = channel === 'alpha-value' ? 100 : 255;
+    if (!input.value.trim() || !Number.isInteger(value) || value < 0 || value > maximum) { input.setAttribute('aria-invalid', 'true'); return; }
+    const [red, green, blue, alpha] = colorChannels(settings[activeColorKey]);
+    const next = channel === 'red' ? [value, green, blue, alpha] : channel === 'green' ? [red, value, blue, alpha] : channel === 'blue' ? [red, green, value, alpha] : [red, green, blue, Math.round(value / 100 * 255)];
+    setActiveColor(rgbToHex8(next[0], next[1], next[2], next[3]), channel === 'alpha-value');
+    input.removeAttribute('aria-invalid');
+  });
+  input.addEventListener('keydown', (event) => { if (event.key === 'Enter') input.blur(); });
 });
 function bindColorTextField(id: string, parse: (value: string) => string | null): void {
   const input = $<HTMLInputElement>(id);
