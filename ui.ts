@@ -64,12 +64,12 @@ let selectionCount = 0;
 let selectionRevision = -1;
 let loadedPreviewRevision = -1;
 let actionBusy = false;
-let canRestore = false, undoCount = 0, redoCount = 0;
+let canRestore = false, canUndo = false, undoCount = 0, redoCount = 0;
 
 function refreshActionButtons(): void {
   $<HTMLButtonElement>('apply').disabled = actionBusy || selectionCount === 0 || loadedPreviewRevision !== selectionRevision;
   $<HTMLButtonElement>('restore').disabled = actionBusy || !canRestore;
-  $<HTMLButtonElement>('undo').disabled = actionBusy || undoCount === 0;
+  $<HTMLButtonElement>('undo').disabled = actionBusy || undoCount === 0 || !canUndo;
   $<HTMLButtonElement>('redo').disabled = actionBusy || redoCount === 0;
   $<HTMLButtonElement>('reset').disabled = actionBusy;
 }
@@ -173,6 +173,7 @@ function setLanguage(next: Language): void {
 }
 
 function localizeNotice(message: string): string {
+  if (message === 'Select the layers from the latest operation to undo.') return language === 'zh-CN' ? '请选择最近一次操作的结果图层后再撤回。' : message;
   if (message === translations.en.selectionChanged) return t('selectionChanged');
   if (message === 'Select one or more layers on the canvas first') return t('chooseLayersToast');
   if (message === 'Preview reset') return t('previewReset');
@@ -1162,7 +1163,7 @@ function setFabOpen(open: boolean): void {
 $('fab-toggle').addEventListener('click', () => setFabOpen(!fabOpen));
 document.addEventListener('click', (event) => { if (fabOpen && event.target instanceof Node && !$('fab-area').contains(event.target)) setFabOpen(false); });
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && fabOpen) { setFabOpen(false); $<HTMLButtonElement>('fab-toggle').focus(); } });
-$('undo').addEventListener('click', () => { setFabOpen(false); post({ type: 'undo' }); });
+$('undo').addEventListener('click', () => { if (actionBusy || !canUndo || undoCount === 0) return; setFabOpen(false); post({ type: 'undo' }); });
 $('redo').addEventListener('click', () => { setFabOpen(false); post({ type: 'redo' }); });
 $('apply').addEventListener('click', () => {
   if (actionBusy || loadedPreviewRevision !== selectionRevision || selectionCount === 0) return;
@@ -1291,7 +1292,7 @@ document.addEventListener('keydown', (event) => {
 $('app').querySelector('main')?.addEventListener('scroll', closeColorPicker);
 window.addEventListener('resize', closeColorPicker);
 ($<HTMLSelectElement>('language-select')).addEventListener('change', (event) => setLanguage((event.currentTarget as HTMLSelectElement).value as Language));
-window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; restorable?: number; undo?: number; redo?: number; busy?: boolean; text?: string } & PreviewMessage }>) => {
+window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?: number; restorable?: number; undo?: number; redo?: number; undoable?: boolean; busy?: boolean; text?: string } & PreviewMessage }>) => {
   const message = event.data.pluginMessage;
   if (!message) return;
   if (message.type === 'layer-preview') void loadLayerPreview(message);
@@ -1301,6 +1302,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?
     previewLoadRevision += 1;
     selectionCount = Number(message.count || 0);
     canRestore = Boolean(message.restorable);
+    canUndo = Boolean(message.undoable);
     refreshActionButtons();
     $('selection').textContent = t('selected', { count: selectionCount });
     $('selection').classList.toggle('ready', selectionCount > 0);
@@ -1309,6 +1311,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage?: { type: string; count?
   if (message.type === 'history') {
     undoCount = message.undo || 0;
     redoCount = message.redo || 0;
+    canUndo = Boolean(message.undoable);
     refreshActionButtons();
   }
   if (message.type === 'action-state') {

@@ -70,8 +70,24 @@ if (figma.editorType !== 'figma') {
   const redoHistory: HistoryAction[] = [];
   const redoneIds = new Map<string, string>();
 
+  function resolveHistoryId(id: string): string {
+    const visited = new Set<string>();
+    while (redoneIds.has(id) && !visited.has(id)) {
+      visited.add(id);
+      id = redoneIds.get(id)!;
+    }
+    return id;
+  }
+
+  function canUndoSelection(): boolean {
+    const action = undoHistory[undoHistory.length - 1];
+    if (!action) return false;
+    const selectedIds = new Set(selectedNodes().map((node) => node.id));
+    return selectedIds.size === action.afterIds.length && action.afterIds.every((id) => selectedIds.has(id) || selectedIds.has(resolveHistoryId(id)));
+  }
+
   function sendHistory(): void {
-    figma.ui.postMessage({ type: 'history', undo: undoHistory.length, redo: redoHistory.length });
+    figma.ui.postMessage({ type: 'history', undo: undoHistory.length, redo: redoHistory.length, undoable: canUndoSelection() });
   }
 
   function recordHistory(action: HistoryAction): void {
@@ -83,12 +99,7 @@ if (figma.editorType !== 'figma') {
 
   async function selectHistoryNodes(ids: readonly string[]): Promise<boolean> {
     const nodes = await Promise.all(ids.map(async (id) => {
-      let mapped = id;
-      const visited = new Set<string>();
-      while (redoneIds.has(mapped) && !visited.has(mapped)) {
-        visited.add(mapped);
-        mapped = redoneIds.get(mapped)!;
-      }
+      const mapped = resolveHistoryId(id);
       return await figma.getNodeByIdAsync(mapped) || (mapped !== id ? await figma.getNodeByIdAsync(id) : null);
     }));
     const selected = nodes.filter((node): node is SceneNode => node !== null && 'visible' in node);
@@ -133,7 +144,7 @@ if (figma.editorType !== 'figma') {
     if (pendingActions > 0) { previewRevision += 1; return; }
     const nodes = selectedNodes();
     const revision = ++previewRevision;
-    figma.ui.postMessage({ type: 'selection', revision, count: nodes.length, restorable: nodes.filter((node) => readOriginal(originalSource(node)) !== null).length });
+    figma.ui.postMessage({ type: 'selection', revision, count: nodes.length, restorable: nodes.filter((node) => readOriginal(originalSource(node)) !== null).length, undoable: canUndoSelection() });
     if (nodes.length === 0) {
       figma.ui.postMessage({ type: 'layer-preview', revision, nodes: [], bounds: null });
       return;
@@ -431,6 +442,10 @@ if (figma.editorType !== 'figma') {
   async function undoAction(): Promise<void> {
     const action = undoHistory[undoHistory.length - 1];
     if (!action) return;
+    if (!canUndoSelection()) {
+      notice('Select the layers from the latest operation to undo.');
+      return;
+    }
     figma.triggerUndo();
     undoHistory.pop();
     redoHistory.push(action);
